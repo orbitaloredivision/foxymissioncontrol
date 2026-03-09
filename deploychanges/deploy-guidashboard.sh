@@ -3,7 +3,7 @@ set -e
 
 REPO_DIR="/home/orangepi/guidashboard"
 NGINX_ROOT="/var/www/html"
-REPO_URL="git@github.com:tarassych/guidashboard.git"
+REPO_URL="git@github.com:orbitaloredivision/foxymissioncontrol.git"
 BRANCH="main"
 SERVER_NAME="guidashboard-server"
 NGINX_CONF="/etc/nginx/sites-enabled/default"

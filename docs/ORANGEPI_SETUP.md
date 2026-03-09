@@ -69,7 +69,7 @@ mkdir -p /home/orangepi/guidashboard
 
 ```bash
 cd /home/orangepi
-git clone https://github.com/tarassych/guidashboard.git guidashboard-repo
+git clone https://github.com/orbitaloredivision/foxymissioncontrol.git guidashboard-repo
 ```
 
 ---

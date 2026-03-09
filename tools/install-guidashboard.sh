@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # GUI Dashboard Installer for Orange Pi
-# https://github.com/tarassych/guidashboard
+# https://github.com/orbitaloredivision/foxymissioncontrol
 #
 # This script sets up the complete GUI Dashboard system including:
 # - Node.js backend API server
@@ -30,7 +30,7 @@ SKIP_CONFIRM=false
 # Configuration
 # =============================================================================
 
-REPO_URL="https://github.com/tarassych/guidashboard.git"
+REPO_URL="https://github.com/orbitaloredivision/foxymissioncontrol.git"
 MEDIAMTX_VERSION="v1.9.3"
 MEDIAMTX_VERSION_NUM="1.9.3"
 MEDIAMTX_ARCH="linux_arm64v8"
@@ -81,7 +81,7 @@ SPINNER_PID=""
 print_banner() {
     if [ "$PLAIN_MODE" = true ]; then
         echo ""
-        echo "GUI Dashboard Installer - github.com/tarassych/guidashboard"
+        echo "GUI Dashboard Installer - github.com/orbitaloredivision/foxymissioncontrol"
         echo ""
         return
     fi
@@ -89,7 +89,7 @@ print_banner() {
     echo ""
     echo -e "${CYAN}+==================================================================+${NC}"
     echo -e "${CYAN}|${NC}${BOLD}${WHITE}           GUI Dashboard Installer for Orange Pi              ${NC}${CYAN}|${NC}"
-    echo -e "${CYAN}|${NC}${DIM}                    github.com/tarassych/guidashboard           ${NC}${CYAN}|${NC}"
+    echo -e "${CYAN}|${NC}${DIM}              github.com/orbitaloredivision/foxymissioncontrol  ${NC}${CYAN}|${NC}"
     echo -e "${CYAN}+==================================================================+${NC}"
     echo ""
 }
