@@ -1132,7 +1132,7 @@ function TelemetryLog({ droneId, onTelemetryUpdate, onStateChange }) {
   const [heartbeats, setHeartbeats] = useState([]) // Track heartbeat events with timestamps
   const lastIdRef = useRef(0)
   const isFirstFetch = useRef(true) // Skip heartbeat on initial historical data load
-  const lastFreshDataTime = useRef(0) // Track when we last received fresh telemetry
+  const lastDataTime = useRef(0) // Track when we last received any telemetry records
   
   // Expose state changes to parent
   useEffect(() => {
@@ -1228,47 +1228,30 @@ function TelemetryLog({ droneId, onTelemetryUpdate, onStateChange }) {
         if (!isMounted) return
 
         if (data.success) {
-          const OFFLINE_TIMEOUT = 60000 // 60 seconds - same as dashboard offline detection
+          const DISCONNECT_TIMEOUT = 60000 // 60 seconds with no new records = disconnected
           const now = Date.now()
           
           if (data.records.length > 0) {
-            // Update lastId ref first
             lastIdRef.current = data.latestId
-            
-            // Check if most recent record is fresh (within 60 seconds)
-            const mostRecentRecord = data.records[0] // Records come newest first
-            const recordAge = now - new Date(mostRecentRecord.timestamp).getTime()
-            const isFresh = recordAge < OFFLINE_TIMEOUT
+            lastDataTime.current = now
+            setConnectionStatus('connected')
             
             // Stack behavior: new on top, limit to 20
             setRecords(prev => [...data.records, ...prev].slice(0, 20))
             
-            if (isFresh) {
-              // Fresh data received - mark as connected and update timestamp
-              lastFreshDataTime.current = now
-              setConnectionStatus('connected')
-              
-              // Trigger heartbeat animation only for NEW fresh data (not initial load)
-              if (!isFirstFetch.current) {
-                triggerHeartbeat()
-              }
-              
-              // Only update parent telemetry state when data is fresh
-              if (onTelemetryUpdate) {
-                const recordsToProcess = data.records.slice().reverse()
-                recordsToProcess.forEach(record => {
-                  onTelemetryUpdate(record.data)
-                })
-              }
+            if (!isFirstFetch.current) {
+              triggerHeartbeat()
             }
+            
+            if (onTelemetryUpdate) {
+              const recordsToProcess = data.records.slice().reverse()
+              recordsToProcess.forEach(record => {
+                onTelemetryUpdate(record.data)
+              })
+            }
+            
             isFirstFetch.current = false
-          }
-          
-          // Check if we should mark as disconnected (no fresh data for 60 seconds)
-          if (lastFreshDataTime.current > 0 && now - lastFreshDataTime.current > OFFLINE_TIMEOUT) {
-            setConnectionStatus('disconnected')
-          } else if (lastFreshDataTime.current === 0 && isFirstFetch.current === false) {
-            // Never received fresh data after initial load
+          } else if (lastDataTime.current > 0 && now - lastDataTime.current > DISCONNECT_TIMEOUT) {
             setConnectionStatus('disconnected')
           }
         }
