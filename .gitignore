@@ -21,6 +21,9 @@ server/drone-profiles.json
 # Documentation (local only)
 docs/
 
+# GitHub token (secrets)
+.github-token
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

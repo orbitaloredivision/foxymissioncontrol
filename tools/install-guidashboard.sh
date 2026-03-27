@@ -344,7 +344,7 @@ check_user_exists() {
 }
 
 run_as_orangepi() {
-    sudo -u orangepi bash -c "$1"
+    sudo -u orangepi HOME="$HOME_DIR" PM2_HOME="$HOME_DIR/.pm2" bash -c "$1"
 }
 
 # =============================================================================
@@ -1358,7 +1358,9 @@ start_backend() {
     local LOG="/tmp/guidashboard-upgrade.log"
     echo "--- start_backend $(date) ---" >> "$LOG" 2>/dev/null || true
     
-    # Reason 1 diagnostic: pm2 path (as orangepi user)
+    # Kill root's PM2 daemon if running (it interferes with orangepi's PM2)
+    pm2 kill > /dev/null 2>&1 || true
+    
     run_as_orangepi "echo PATH=\$PATH" >> "$LOG" 2>/dev/null || true
     run_as_orangepi "which pm2 2>/dev/null || echo pm2_NOT_FOUND" >> "$LOG" 2>/dev/null || true
     
@@ -1367,7 +1369,6 @@ start_backend() {
     echo "pm2_show_exit=$pm2_show_exit" >> "$LOG" 2>/dev/null || true
     
     if [ $pm2_show_exit -eq 0 ]; then
-        # Reason 2 diagnostic: status extraction
         local jlist_raw=$(run_as_orangepi "pm2 jlist 2>/dev/null")
         echo "pm2_jlist_sample=${jlist_raw:0:400}" >> "$LOG" 2>/dev/null || true
         local status=$(echo "$jlist_raw" | grep -o '"name":"guidashboard-api"[^}]*"status":"[^"]*"' | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
@@ -1401,11 +1402,23 @@ start_backend() {
     echo ""
     echo -e "  ${CYAN}>${NC} Launching Node.js server..."
     
-    if ! run_boxed "cd $SERVER_DIR && sudo -u orangepi pm2 start index.js --name guidashboard-api 2>&1 | tail -10"; then
+    local pm2_output
+    pm2_output=$(run_as_orangepi "cd $SERVER_DIR && pm2 start index.js --name guidashboard-api" 2>&1)
+    local pm2_exit=$?
+    
+    echo "$pm2_output" | tail -10 | while IFS= read -r line; do
+        if [ "$PLAIN_MODE" = true ]; then
+            echo "    $line"
+        else
+            echo -e "    ${GRAY}|${NC} ${DIM}$line${NC}"
+        fi
+    done
+    
+    if [ $pm2_exit -ne 0 ]; then
         fail "Failed to start backend server"
     fi
     
-    add_rollback "sudo -u orangepi pm2 delete guidashboard-api 2>/dev/null"
+    add_rollback "run_as_orangepi 'pm2 delete guidashboard-api 2>/dev/null'"
     
     start_spinner "Saving PM2 process list"
     run_as_orangepi "pm2 save" > /dev/null 2>&1
