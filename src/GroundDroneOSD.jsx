@@ -45,6 +45,7 @@ export default function GroundDroneOSD({
   const { t } = useTranslation()
   const isUgv = droneType === DRONE_TYPES.UGV
   const [mapVisible, setMapVisible] = useState(true)
+  const [mirrorVisible, setMirrorVisible] = useState(true)
   
   return (
     <>
@@ -63,26 +64,49 @@ export default function GroundDroneOSD({
           showFailsafe={true}
         />
 
-        {/* Fuse Switches & Rear View Mirror - hidden for UGV */}
+        {/* Fuse Switches, Mirror & Heading Tape - hidden for UGV */}
         {!isUgv && (
           <div className="hud-mirror-section">
             <FuseSwitch label="F1" armed={telemetry.f1} />
-            <div className="rear-mirror">
-              <div className="mirror-frame">
-                <CameraFeed streamUrl={rearCameraUrl} variant="mirror" />
-                <span className="mirror-label">{t('osd.rear')}</span>
+            <div className="mirror-column">
+              <button
+                className="mirror-fold-btn"
+                onClick={() => setMirrorVisible(v => !v)}
+              >
+                {mirrorVisible ? (
+                  <svg viewBox="0 0 24 10" width="28" height="10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="4,9 12,3 20,9" />
+                    <polyline points="4,6 12,0 20,6" opacity="0.5" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 10" width="28" height="10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="4,1 12,7 20,1" />
+                    <polyline points="4,4 12,10 20,4" opacity="0.5" />
+                  </svg>
+                )}
+              </button>
+              {mirrorVisible && (
+                <div className="rear-mirror">
+                  <div className="mirror-frame">
+                    <CameraFeed streamUrl={rearCameraUrl} variant="mirror" />
+                    <span className="mirror-label">{t('osd.rear')}</span>
+                  </div>
+                </div>
+              )}
+              <div className="mirror-heading-area">
+                {(telemetry.f1 && telemetry.f2) ? (
+                  <WarningBanner />
+                ) : (
+                  <HeadingTape heading={telemetry.heading} />
+                )}
               </div>
             </div>
             <FuseSwitch label="F2" armed={telemetry.f2} />
           </div>
         )}
 
-        {/* Heading Tape or Warning Banner - UGV always shows heading tape (no armed warning) */}
-        {(!isUgv && telemetry.f1 && telemetry.f2) ? (
-          <div className="hud-warning-banner">
-            <WarningBanner />
-          </div>
-        ) : (
+        {/* UGV: heading tape rendered separately (no mirror section) */}
+        {isUgv && (
           <div className="hud-heading-tape">
             <HeadingTape heading={telemetry.heading} />
           </div>

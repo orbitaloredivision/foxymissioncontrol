@@ -781,6 +781,41 @@ body {
   /* No longer absolute - part of flex container */
 }
 
+/* Column layout for mirror + fold button + heading tape */
+.mirror-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 420px;
+}
+
+.mirror-fold-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 18px;
+  border: 1px solid var(--theme-border);
+  border-radius: 4px 4px 0 0;
+  background: rgba(0, 0, 0, 0.7);
+  color: var(--theme-text-muted);
+  cursor: pointer;
+  padding: 0;
+  z-index: 5;
+  transition: color 0.15s, background 0.15s;
+  margin-bottom: -1px;
+}
+
+.mirror-fold-btn:hover {
+  color: var(--theme-accent, #00ff88);
+  background: rgba(0, 255, 136, 0.1);
+}
+
+.mirror-heading-area {
+  width: 300px;
+  margin-top: 8px;
+}
+
 /* Fuse Switch */
 .fuse-switch {
   display: flex;
@@ -2190,13 +2225,17 @@ body {
 
 /* ========== RESPONSIVE ========== */
 @media (max-width: 1100px) {
+  .mirror-column {
+    width: 350px;
+  }
+  
   .mirror-frame {
     width: 350px;
     height: 100px;
   }
   
-  .hud-heading-tape {
-    top: 170px;
+  .mirror-heading-area {
+    width: 260px;
   }
   
   .hud-overlay--ugv .hud-heading-tape {
@@ -2224,14 +2263,17 @@ body {
     top: 50px;
   }
   
+  .mirror-column {
+    width: 280px;
+  }
+  
   .mirror-frame {
     width: 280px;
     height: 85px;
   }
   
-  .hud-heading-tape {
-    width: 250px;
-    top: 160px;
+  .mirror-heading-area {
+    width: 240px;
   }
   
   .hud-overlay--ugv .hud-heading-tape {
@@ -2268,9 +2310,17 @@ body {
     gap: 8px;
   }
   
+  .mirror-column {
+    width: 200px;
+  }
+  
   .mirror-frame {
     width: 200px;
     height: 60px;
+  }
+  
+  .mirror-heading-area {
+    width: 180px;
   }
   
   .hud-minimap-container {
@@ -2289,16 +2339,6 @@ body {
     transform-origin: top right;
     right: 5px;
     top: 50px;
-  }
-  
-  .mirror-frame {
-    width: 180px;
-    height: 55px;
-  }
-  
-  .hud-heading-tape {
-    width: 200px;
-    top: 120px;
   }
   
   .hud-overlay--ugv .hud-heading-tape {
