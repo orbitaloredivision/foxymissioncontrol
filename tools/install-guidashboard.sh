@@ -1364,13 +1364,10 @@ start_backend() {
     run_as_orangepi "echo PATH=\$PATH" >> "$LOG" 2>/dev/null || true
     run_as_orangepi "which pm2 2>/dev/null || echo pm2_NOT_FOUND" >> "$LOG" 2>/dev/null || true
     
-    run_as_orangepi "pm2 show guidashboard-api" > /dev/null 2>&1
-    local pm2_show_exit=$?
-    echo "pm2_show_exit=$pm2_show_exit" >> "$LOG" 2>/dev/null || true
-    
-    if [ $pm2_show_exit -eq 0 ]; then
-        local jlist_raw=$(run_as_orangepi "pm2 jlist 2>/dev/null")
-        echo "pm2_jlist_sample=${jlist_raw:0:400}" >> "$LOG" 2>/dev/null || true
+    # Check if guidashboard-api is already running (|| true prevents set -e exit)
+    if run_as_orangepi "pm2 show guidashboard-api" > /dev/null 2>&1; then
+        echo "pm2_show=found" >> "$LOG" 2>/dev/null || true
+        local jlist_raw=$(run_as_orangepi "pm2 jlist 2>/dev/null" || true)
         local status=$(echo "$jlist_raw" | grep -o '"name":"guidashboard-api"[^}]*"status":"[^"]*"' | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
         echo "status=[$status]" >> "$LOG" 2>/dev/null || true
         
@@ -1378,12 +1375,12 @@ start_backend() {
             print_installed "Backend server (running)"
             
             start_spinner "Restarting to apply updates"
-            run_as_orangepi "pm2 restart guidashboard-api" > /dev/null 2>&1
+            run_as_orangepi "pm2 restart guidashboard-api" > /dev/null 2>&1 || true
             stop_spinner
             print_success "Backend restarted"
             
             start_spinner "Saving PM2 state"
-            run_as_orangepi "pm2 save" > /dev/null 2>&1
+            run_as_orangepi "pm2 save" > /dev/null 2>&1 || true
             stop_spinner
             print_success "PM2 state saved"
             
@@ -1392,7 +1389,7 @@ start_backend() {
         fi
         echo "REASON2: status not online (got [$status]), taking delete path" >> "$LOG" 2>/dev/null || true
     else
-        echo "REASON1: pm2 show failed (exit=$pm2_show_exit), taking delete path" >> "$LOG" 2>/dev/null || true
+        echo "REASON1: pm2 show not found, taking fresh start path" >> "$LOG" 2>/dev/null || true
     fi
     
     # Stop any existing instance
@@ -1402,9 +1399,9 @@ start_backend() {
     echo ""
     echo -e "  ${CYAN}>${NC} Launching Node.js server..."
     
-    local pm2_output
-    pm2_output=$(run_as_orangepi "cd $SERVER_DIR && pm2 start index.js --name guidashboard-api" 2>&1)
-    local pm2_exit=$?
+    local pm2_output=""
+    local pm2_exit=0
+    pm2_output=$(run_as_orangepi "cd $SERVER_DIR && pm2 start index.js --name guidashboard-api" 2>&1) || pm2_exit=$?
     
     echo "$pm2_output" | tail -10 | while IFS= read -r line; do
         if [ "$PLAIN_MODE" = true ]; then
@@ -1421,7 +1418,7 @@ start_backend() {
     add_rollback "run_as_orangepi 'pm2 delete guidashboard-api 2>/dev/null'"
     
     start_spinner "Saving PM2 process list"
-    run_as_orangepi "pm2 save" > /dev/null 2>&1
+    run_as_orangepi "pm2 save" > /dev/null 2>&1 || true
     stop_spinner
     print_success "Backend started and saved"
     
@@ -1454,7 +1451,7 @@ verify_installation() {
     fi
     
     # 3. Check PM2 backend running
-    if sudo -u orangepi pm2 list 2>/dev/null | grep -q "online"; then
+    if run_as_orangepi "pm2 list" 2>/dev/null | grep -q "online"; then
         print_success "Backend API (PM2): running"
     else
         print_error "Backend API (PM2): not running"
