@@ -629,45 +629,57 @@ clone_repository() {
     print_step 4 "Cloning GUI Dashboard Repository"
     
     if [ -d "$REPO_DIR/.git" ]; then
-        print_installed "Repository at $REPO_DIR"
-        print_info "Updating to latest version..."
-        
-        # Reset any local changes and force update to match remote
-        start_spinner "Fetching latest changes"
-        run_as_orangepi "cd $REPO_DIR && git fetch origin" > /tmp/git-fetch.log 2>&1 || true
-        stop_spinner
-        
-        # Get current and remote revisions
-        local local_rev=$(run_as_orangepi "cd $REPO_DIR && git rev-parse HEAD" 2>/dev/null || echo "unknown")
-        local remote_rev=$(run_as_orangepi "cd $REPO_DIR && git rev-parse origin/main" 2>/dev/null || echo "unknown")
-        
-        print_detail "Local:  ${local_rev:0:7}"
-        print_detail "Remote: ${remote_rev:0:7}"
-        
-        if [ "$local_rev" = "$remote_rev" ]; then
-            print_success "Repository is up to date"
+        # Verify the repo is healthy (HEAD must resolve to a valid commit)
+        if ! run_as_orangepi "cd $REPO_DIR && git rev-parse HEAD" > /dev/null 2>&1; then
+            print_warning "Repository at $REPO_DIR is corrupted (cannot resolve HEAD)"
+            print_info "Removing broken repository and re-cloning..."
+            rm -rf "$REPO_DIR"
+            # Fall through to fresh clone below
         else
-            # Force reset to match remote (discard any local changes)
-            print_info "Updating repository..."
-            if [ "$PLAIN_MODE" != true ]; then
-                echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
-            fi
-            run_as_orangepi "cd $REPO_DIR && git reset --hard origin/main" 2>&1 | while IFS= read -r line; do
-                echo "    $line"
-            done
-            local reset_exit=${PIPESTATUS[0]}
-            if [ "$PLAIN_MODE" != true ]; then
-                echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+            print_installed "Repository at $REPO_DIR"
+            print_info "Updating to latest version..."
+            
+            # Reset any local changes and force update to match remote
+            start_spinner "Fetching latest changes"
+            run_as_orangepi "cd $REPO_DIR && git fetch origin" > /tmp/git-fetch.log 2>&1 || true
+            stop_spinner
+            
+            # Get current and remote revisions
+            local local_rev=$(run_as_orangepi "cd $REPO_DIR && git rev-parse HEAD" 2>/dev/null || echo "unknown")
+            local remote_rev=$(run_as_orangepi "cd $REPO_DIR && git rev-parse origin/main" 2>/dev/null || echo "unknown")
+            
+            print_detail "Local:  ${local_rev:0:7}"
+            print_detail "Remote: ${remote_rev:0:7}"
+            
+            if [ "$local_rev" = "$remote_rev" ]; then
+                print_success "Repository is up to date"
+            else
+                # Force reset to match remote (discard any local changes)
+                print_info "Updating repository..."
+                if [ "$PLAIN_MODE" != true ]; then
+                    echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+                fi
+                run_as_orangepi "cd $REPO_DIR && git reset --hard origin/main" 2>&1 | while IFS= read -r line; do
+                    echo "    $line"
+                done
+                local reset_exit=${PIPESTATUS[0]}
+                if [ "$PLAIN_MODE" != true ]; then
+                    echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+                fi
+                
+                if [ $reset_exit -eq 0 ]; then
+                    local new_rev=$(run_as_orangepi "cd $REPO_DIR && git rev-parse HEAD" 2>/dev/null || echo "unknown")
+                    print_success "Repository updated to ${new_rev:0:7}"
+                else
+                    print_warning "Update failed, removing and re-cloning..."
+                    rm -rf "$REPO_DIR"
+                    # Fall through to fresh clone below
+                fi
             fi
             
-            if [ $reset_exit -eq 0 ]; then
-                local new_rev=$(run_as_orangepi "cd $REPO_DIR && git rev-parse HEAD" 2>/dev/null || echo "unknown")
-                print_success "Repository updated to ${new_rev:0:7}"
-            else
-                print_warning "Update failed, using existing version"
-            fi
+            # If repo still exists after update, we're done
+            [ -d "$REPO_DIR/.git" ] && return
         fi
-        return
     fi
     
     print_info "Cloning from: $REPO_URL"
@@ -727,9 +739,26 @@ clone_repository() {
 setup_backend() {
     print_step 5 "Setting Up Backend Server"
     
+    # Detect placeholder/empty server files from a broken previous deployment
+    # If index.js exists but is 0 bytes, the entire directory is stubs
+    if [ -f "$SERVER_DIR/index.js" ] && [ ! -s "$SERVER_DIR/index.js" ]; then
+        print_warning "Server files are empty (broken previous deploy) - cleaning up..."
+        # Preserve drone-profiles.json content if non-empty before wiping
+        local saved_profiles=""
+        if [ -s "$SERVER_DIR/drone-profiles.json" ]; then
+            saved_profiles=$(cat "$SERVER_DIR/drone-profiles.json")
+        fi
+        rm -rf "$SERVER_DIR"/*
+        if [ -n "$saved_profiles" ]; then
+            echo "$saved_profiles" > "$SERVER_DIR/drone-profiles.json"
+            chown orangepi:orangepi "$SERVER_DIR/drone-profiles.json"
+        fi
+        print_success "Cleaned up empty server files"
+    fi
+    
     # Backup existing drone-profiles.json before copying (to preserve paired drones)
     local profiles_backup=""
-    if [ -f "$SERVER_DIR/drone-profiles.json" ]; then
+    if [ -s "$SERVER_DIR/drone-profiles.json" ]; then
         profiles_backup=$(cat "$SERVER_DIR/drone-profiles.json")
         print_info "Backing up existing drone profiles..."
     fi

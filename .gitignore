@@ -18,6 +18,9 @@ node_modules
 # Local drone profiles (environment-specific)
 server/drone-profiles.json
 
+# Documentation (local only)
+docs/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
