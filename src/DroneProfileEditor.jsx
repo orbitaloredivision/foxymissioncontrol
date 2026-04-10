@@ -158,6 +158,8 @@ function VolyaDroneIcon({ size = 24, active = false }) {
       <rect x="52" y="36" width="4" height="18" rx="1" fill={color} opacity="0.5"/>
       {/* Arch / shield above gun */}
       <path d="M 12,26 L 12,10 Q 12,6 16,6 L 48,6 Q 52,6 52,10 L 52,26" fill="none" stroke={color} strokeWidth="2" opacity="0.5"/>
+      {/* Thicker center rib (~40% width) */}
+      <path d="M 24,26 L 24,6 L 40,6 L 40,26" fill="none" stroke={color} strokeWidth="3" opacity="0.5"/>
       {/* Turret base */}
       <rect x="24" y="20" width="16" height="8" rx="2" fill={color} opacity="0.7"/>
       <rect x="24" y="20" width="16" height="8" rx="2" stroke={color} strokeWidth="2"/>
