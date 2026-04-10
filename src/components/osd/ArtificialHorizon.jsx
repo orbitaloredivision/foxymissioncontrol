@@ -6,14 +6,13 @@
 import { useMemo } from 'react'
 
 export function ArtificialHorizon({ pitch = 0, roll = 0 }) {
-  // Invert pitch and roll to match telemetry direction
+  // Invert pitch to match telemetry direction (positive pitch = nose up)
   const invertedPitch = pitch * -1
-  const invertedRoll = roll * -1
   
   // Clamp pitch to reasonable range (-90 to +90)
   const clampedPitch = Math.max(-90, Math.min(90, invertedPitch))
-  // Roll can be -180 to +180
-  const clampedRoll = Math.max(-180, Math.min(180, invertedRoll))
+  // Roll: use as-is from telemetry (positive = right bank)
+  const clampedRoll = Math.max(-180, Math.min(180, roll))
   
   // Pitch scaling: 1vh per degree for screen-independent positioning
   const pitchVhPerDegree = 1
