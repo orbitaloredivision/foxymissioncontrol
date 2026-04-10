@@ -7,28 +7,32 @@
 export const DRONE_TYPES = {
   FOXY: 'foxy',
   GENERIC_FPV: 'generic_fpv',
-  UGV: 'ugv'
+  UGV: 'ugv',
+  VOLYA: 'volya'
 }
 
 // Full labels for forms and detailed displays
 export const DRONE_TYPE_LABELS = {
   [DRONE_TYPES.FOXY]: 'Foxy',
   [DRONE_TYPES.GENERIC_FPV]: 'Generic FPV',
-  [DRONE_TYPES.UGV]: 'General UGV'
+  [DRONE_TYPES.UGV]: 'General UGV',
+  [DRONE_TYPES.VOLYA]: 'Volya'
 }
 
 // Short labels for compact displays (dashboard overlays, etc.)
 export const DRONE_TYPE_LABELS_SHORT = {
   [DRONE_TYPES.FOXY]: 'Foxy',
   [DRONE_TYPES.GENERIC_FPV]: 'FPV',
-  [DRONE_TYPES.UGV]: 'UGV'
+  [DRONE_TYPES.UGV]: 'UGV',
+  [DRONE_TYPES.VOLYA]: 'Volya'
 }
 
 // i18n keys for translated labels (use with t())
 export const DRONE_TYPE_LABEL_KEYS = {
   [DRONE_TYPES.FOXY]: 'droneType.foxy',
   [DRONE_TYPES.GENERIC_FPV]: 'droneType.genericFpv',
-  [DRONE_TYPES.UGV]: 'droneType.ugv'
+  [DRONE_TYPES.UGV]: 'droneType.ugv',
+  [DRONE_TYPES.VOLYA]: 'droneType.volya'
 }
 
 /**
@@ -271,11 +275,12 @@ const GENERIC_FPV_FIELDS = {
   }
 }
 
-// Schema registry (UGV uses Foxy fields - same telemetry structure)
+// Schema registry (UGV and Volya use Foxy fields - same telemetry structure)
 export const TELEMETRY_SCHEMAS = {
   [DRONE_TYPES.FOXY]: FOXY_FIELDS,
   [DRONE_TYPES.GENERIC_FPV]: GENERIC_FPV_FIELDS,
-  [DRONE_TYPES.UGV]: FOXY_FIELDS
+  [DRONE_TYPES.UGV]: FOXY_FIELDS,
+  [DRONE_TYPES.VOLYA]: FOXY_FIELDS
 }
 
 /**

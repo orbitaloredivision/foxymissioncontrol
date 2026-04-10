@@ -3,7 +3,7 @@
  * Contains compass (optional), drone name with type icon, satellites, and quality switch
  */
 import { DRONE_TYPES } from '../../telemetrySchemas'
-import { GroundDroneIcon, FpvDroneIcon } from './DroneTypeIcons'
+import { GroundDroneIcon, FpvDroneIcon, VolyaDroneIcon } from './DroneTypeIcons'
 import { HudCompass } from './HudCompass'
 import { SatelliteIndicator } from './SatelliteIndicator'
 import { QualitySwitch } from './QualitySwitch'
@@ -28,6 +28,8 @@ export function HudLeftPanel({
             <span className="hud-drone-name">
               {droneType === DRONE_TYPES.GENERIC_FPV ? (
                 <FpvDroneIcon size={20} active={true} />
+              ) : droneType === DRONE_TYPES.VOLYA ? (
+                <VolyaDroneIcon size={20} active={true} />
               ) : (
                 <GroundDroneIcon size={20} active={true} />
               )}
@@ -48,6 +50,8 @@ export function HudLeftPanel({
           <span className="hud-drone-name">
             {droneType === DRONE_TYPES.GENERIC_FPV ? (
               <FpvDroneIcon size={20} active={true} />
+            ) : droneType === DRONE_TYPES.VOLYA ? (
+              <VolyaDroneIcon size={20} active={true} />
             ) : (
               <GroundDroneIcon size={20} active={true} />
             )}

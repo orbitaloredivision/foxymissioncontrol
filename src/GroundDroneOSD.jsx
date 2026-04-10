@@ -43,7 +43,7 @@ export default function GroundDroneOSD({
   directionIndex
 }) {
   const { t } = useTranslation()
-  const isUgv = droneType === DRONE_TYPES.UGV
+  const isUgv = droneType === DRONE_TYPES.UGV || droneType === DRONE_TYPES.VOLYA
   const [mapVisible, setMapVisible] = useState(true)
   const [mirrorVisible, setMirrorVisible] = useState(true)
   

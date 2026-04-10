@@ -147,6 +147,31 @@ function UgvDroneIcon({ size = 24, active = false }) {
   )
 }
 
+// Volya Icon - UGV body with gun turret
+function VolyaDroneIcon({ size = 24, active = false }) {
+  const color = active ? 'var(--hud-primary, #00ff88)' : '#666'
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Body - same as UGV */}
+      <rect x="12" y="26" width="40" height="14" rx="3" fill={color}/>
+      {/* Left track */}
+      <rect x="6" y="34" width="8" height="22" rx="2" stroke={color} strokeWidth="3" fill="none"/>
+      <rect x="8" y="36" width="4" height="18" rx="1" fill={color} opacity="0.5"/>
+      {/* Right track */}
+      <rect x="50" y="34" width="8" height="22" rx="2" stroke={color} strokeWidth="3" fill="none"/>
+      <rect x="52" y="36" width="4" height="18" rx="1" fill={color} opacity="0.5"/>
+      {/* Turret base */}
+      <rect x="24" y="20" width="16" height="8" rx="2" fill={color} opacity="0.7"/>
+      <rect x="24" y="20" width="16" height="8" rx="2" stroke={color} strokeWidth="2"/>
+      {/* Gun barrel */}
+      <rect x="40" y="21" width="18" height="4" rx="1" fill={color} opacity="0.6"/>
+      <rect x="40" y="21" width="18" height="4" rx="1" stroke={color} strokeWidth="2"/>
+      {/* Muzzle */}
+      <rect x="56" y="20" width="4" height="6" rx="1" stroke={color} strokeWidth="2" fill="none"/>
+    </svg>
+  )
+}
+
 // Mini drone preview card with live telemetry and camera feed
 function DroneCard({ 
   droneId, 
@@ -214,6 +239,11 @@ function DroneCard({
             <>
               <UgvDroneIcon size={32} active={true} />
               <span className="type-label">{DRONE_TYPE_LABELS_SHORT[DRONE_TYPES.UGV]}</span>
+            </>
+          ) : profile?.droneType === DRONE_TYPES.VOLYA ? (
+            <>
+              <VolyaDroneIcon size={32} active={true} />
+              <span className="type-label">{DRONE_TYPE_LABELS_SHORT[DRONE_TYPES.VOLYA]}</span>
             </>
           ) : (
             <>

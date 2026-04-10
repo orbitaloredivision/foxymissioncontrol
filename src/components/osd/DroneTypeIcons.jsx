@@ -1,6 +1,6 @@
 /**
  * Drone Type Icons
- * SVG icons for different drone types (Ground/FPV/UGV)
+ * SVG icons for different drone types (Ground/FPV/UGV/Volya)
  */
 
 // Ground Drone Icon (for type indicator) - wheels
@@ -77,6 +77,39 @@ export function UgvDroneIcon({ size = 24, active = false }) {
       {/* Antenna section */}
       <rect x="26" y="22" width="12" height="10" rx="2" fill="currentColor" opacity="0.4"/>
       <circle cx="32" cy="27" r="3" fill="currentColor"/>
+      <line x1="18" y1="34" x2="46" y2="34" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+// Volya Icon - UGV body with gun turret instead of antenna
+export function VolyaDroneIcon({ size = 24, active = false }) {
+  return (
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 64 64" 
+      fill="none"
+      className={`drone-type-icon volya ${active ? 'active' : ''}`}
+    >
+      {/* Body - same as UGV */}
+      <rect x="12" y="30" width="40" height="14" rx="3" fill="currentColor" opacity="0.3"/>
+      <rect x="12" y="30" width="40" height="14" rx="3" stroke="currentColor" strokeWidth="2"/>
+      {/* Left track */}
+      <rect x="4" y="36" width="8" height="20" rx="2" fill="currentColor" opacity="0.5"/>
+      <rect x="4" y="36" width="8" height="20" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+      {/* Right track */}
+      <rect x="52" y="36" width="8" height="20" rx="2" fill="currentColor" opacity="0.5"/>
+      <rect x="52" y="36" width="8" height="20" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+      {/* Turret base */}
+      <rect x="24" y="24" width="16" height="8" rx="2" fill="currentColor" opacity="0.4"/>
+      <rect x="24" y="24" width="16" height="8" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+      {/* Gun barrel */}
+      <rect x="40" y="25" width="18" height="4" rx="1" fill="currentColor" opacity="0.6"/>
+      <rect x="40" y="25" width="18" height="4" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+      {/* Muzzle */}
+      <rect x="56" y="24" width="4" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" fill="currentColor" opacity="0.3"/>
+      {/* Detail line on body */}
       <line x1="18" y1="34" x2="46" y2="34" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
     </svg>
   )
