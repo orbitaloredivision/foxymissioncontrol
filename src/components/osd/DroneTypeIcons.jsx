@@ -101,6 +101,8 @@ export function VolyaDroneIcon({ size = 24, active = false }) {
       {/* Right track */}
       <rect x="52" y="36" width="8" height="20" rx="2" fill="currentColor" opacity="0.5"/>
       <rect x="52" y="36" width="8" height="20" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+      {/* Arch / shield above gun */}
+      <path d="M 12,30 L 12,14 Q 12,10 16,10 L 48,10 Q 52,10 52,14 L 52,30" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.5"/>
       {/* Turret base */}
       <rect x="24" y="24" width="16" height="8" rx="2" fill="currentColor" opacity="0.4"/>
       <rect x="24" y="24" width="16" height="8" rx="2" stroke="currentColor" strokeWidth="1.5"/>
