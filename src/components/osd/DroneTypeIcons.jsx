@@ -82,7 +82,7 @@ export function UgvDroneIcon({ size = 24, active = false }) {
   )
 }
 
-// Volya Icon - UGV body with gun turret instead of antenna
+// Volya Icon - tracked vehicle with arch frame
 export function VolyaDroneIcon({ size = 24, active = false }) {
   return (
     <svg 
@@ -92,29 +92,21 @@ export function VolyaDroneIcon({ size = 24, active = false }) {
       fill="none"
       className={`drone-type-icon volya ${active ? 'active' : ''}`}
     >
-      {/* Body - same as UGV */}
-      <rect x="12" y="30" width="40" height="14" rx="3" fill="currentColor" opacity="0.3"/>
-      <rect x="12" y="30" width="40" height="14" rx="3" stroke="currentColor" strokeWidth="2"/>
-      {/* Left track */}
-      <rect x="4" y="36" width="8" height="20" rx="2" fill="currentColor" opacity="0.5"/>
-      <rect x="4" y="36" width="8" height="20" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-      {/* Right track */}
-      <rect x="52" y="36" width="8" height="20" rx="2" fill="currentColor" opacity="0.5"/>
-      <rect x="52" y="36" width="8" height="20" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-      {/* Arch / shield above gun */}
-      <path d="M 12,30 L 12,14 Q 12,10 16,10 L 48,10 Q 52,10 52,14 L 52,30" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.5"/>
+      {/* Arch / upper frame */}
+      <path d="M 12,34 L 12,14 Q 12,10 16,10 L 48,10 Q 52,10 52,14 L 52,34" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.5"/>
       {/* Parallel line below arch top, 40% width centered */}
       <line x1="24" y1="13" x2="40" y2="13" stroke="currentColor" strokeWidth="1.5" opacity="0.5"/>
-      {/* Turret base */}
-      <rect x="24" y="24" width="16" height="8" rx="2" fill="currentColor" opacity="0.4"/>
-      <rect x="24" y="24" width="16" height="8" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-      {/* Gun barrel */}
-      <rect x="40" y="25" width="18" height="4" rx="1" fill="currentColor" opacity="0.6"/>
-      <rect x="40" y="25" width="18" height="4" rx="1" stroke="currentColor" strokeWidth="1.5"/>
-      {/* Muzzle */}
-      <rect x="56" y="24" width="4" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" fill="currentColor" opacity="0.3"/>
+      {/* Body - shifted down */}
+      <rect x="12" y="34" width="40" height="14" rx="3" fill="currentColor" opacity="0.3"/>
+      <rect x="12" y="34" width="40" height="14" rx="3" stroke="currentColor" strokeWidth="2"/>
       {/* Detail line on body */}
-      <line x1="18" y1="34" x2="46" y2="34" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="18" y1="38" x2="46" y2="38" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      {/* Left track */}
+      <rect x="4" y="40" width="8" height="20" rx="2" fill="currentColor" opacity="0.5"/>
+      <rect x="4" y="40" width="8" height="20" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+      {/* Right track */}
+      <rect x="52" y="40" width="8" height="20" rx="2" fill="currentColor" opacity="0.5"/>
+      <rect x="52" y="40" width="8" height="20" rx="2" stroke="currentColor" strokeWidth="1.5"/>
     </svg>
   )
 }

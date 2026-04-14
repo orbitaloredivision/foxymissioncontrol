@@ -147,31 +147,23 @@ function UgvDroneIcon({ size = 24, active = false }) {
   )
 }
 
-// Volya Icon - UGV body with gun turret and arch
+// Volya Icon - tracked vehicle with arch frame
 function VolyaDroneIcon({ size = 24, active = false }) {
   const color = active ? 'var(--hud-primary, #00ff88)' : '#666'
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Body - same as UGV */}
-      <rect x="12" y="26" width="40" height="14" rx="3" fill={color}/>
-      {/* Left track */}
-      <rect x="6" y="34" width="8" height="22" rx="2" stroke={color} strokeWidth="3" fill="none"/>
-      <rect x="8" y="36" width="4" height="18" rx="1" fill={color} opacity="0.5"/>
-      {/* Right track */}
-      <rect x="50" y="34" width="8" height="22" rx="2" stroke={color} strokeWidth="3" fill="none"/>
-      <rect x="52" y="36" width="4" height="18" rx="1" fill={color} opacity="0.5"/>
-      {/* Arch / shield above gun */}
-      <path d="M 12,26 L 12,10 Q 12,6 16,6 L 48,6 Q 52,6 52,10 L 52,26" fill="none" stroke={color} strokeWidth="2" opacity="0.5"/>
+      {/* Arch / upper frame */}
+      <path d="M 12,30 L 12,10 Q 12,6 16,6 L 48,6 Q 52,6 52,10 L 52,30" fill="none" stroke={color} strokeWidth="2" opacity="0.5"/>
       {/* Parallel line below arch top, 40% width centered */}
       <line x1="24" y1="9" x2="40" y2="9" stroke={color} strokeWidth="2" opacity="0.5"/>
-      {/* Turret base */}
-      <rect x="24" y="20" width="16" height="8" rx="2" fill={color} opacity="0.7"/>
-      <rect x="24" y="20" width="16" height="8" rx="2" stroke={color} strokeWidth="2"/>
-      {/* Gun barrel */}
-      <rect x="40" y="21" width="18" height="4" rx="1" fill={color} opacity="0.6"/>
-      <rect x="40" y="21" width="18" height="4" rx="1" stroke={color} strokeWidth="2"/>
-      {/* Muzzle */}
-      <rect x="56" y="20" width="4" height="6" rx="1" stroke={color} strokeWidth="2" fill="none"/>
+      {/* Body - shifted down */}
+      <rect x="12" y="30" width="40" height="14" rx="3" fill={color}/>
+      {/* Left track */}
+      <rect x="6" y="38" width="8" height="20" rx="2" stroke={color} strokeWidth="3" fill="none"/>
+      <rect x="8" y="40" width="4" height="16" rx="1" fill={color} opacity="0.5"/>
+      {/* Right track */}
+      <rect x="50" y="38" width="8" height="20" rx="2" stroke={color} strokeWidth="3" fill="none"/>
+      <rect x="52" y="40" width="4" height="16" rx="1" fill={color} opacity="0.5"/>
     </svg>
   )
 }
