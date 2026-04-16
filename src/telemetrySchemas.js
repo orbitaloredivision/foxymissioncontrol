@@ -458,6 +458,11 @@ const DISPLAY_ORDER = {
     'groundspeed', 'speed', 'dist', 'batt_v', 
     'satellites', 'md_str', 'telemetry_time'
   ],
+  [DRONE_TYPES.VOLYA]: [
+    'latitude', 'longitude', 'altitude', 'heading',
+    'groundspeed', 'speed', 'dist', 'batt_v',
+    'satellites', 'md_str', 'telemetry_time'
+  ],
   [DRONE_TYPES.GENERIC_FPV]: [
     'latitude', 'longitude', 'altitude', 'heading',
     'groundspeed', 'batt_v', 'satellites',

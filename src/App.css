@@ -1465,6 +1465,501 @@ body {
   letter-spacing: 1px;
 }
 
+/* ========== VOLYA GEAR INDICATOR ========== */
+.volya-gear-indicator {
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 12px;
+  background: var(--theme-bg-overlay);
+  backdrop-filter: blur(8px);
+  border-color: var(--theme-accent-primary-border);
+  width: 160px;
+  padding: 10px;
+}
+
+.volya-gear-layout {
+  position: relative;
+  display: flex;
+  gap: 6px;
+  height: 242px;
+  align-items: flex-start;
+  padding: 0 2px;
+}
+
+.volya-gear-rail {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 160px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.volya-gear-main {
+  flex: 1;
+  min-width: 0;
+  height: 160px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0;
+  overflow: hidden;
+}
+
+.volya-gear-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.volya-gear-symbol {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 1.65rem;
+  color: var(--theme-text-secondary);
+  line-height: 1;
+}
+
+.volya-gear-slot.active .volya-gear-symbol {
+  color: var(--theme-accent-primary);
+  font-weight: 700;
+  text-shadow: 0 0 10px color-mix(in srgb, var(--theme-accent-primary) 35%, transparent);
+}
+
+.volya-gear-slot.disabled .volya-gear-symbol {
+  color: color-mix(in srgb, var(--theme-text-secondary) 30%, transparent);
+  text-shadow: none;
+  opacity: 0.45;
+}
+
+.volya-gear-knob {
+  position: absolute;
+  left: -3px;
+  width: calc(100% + 6px);
+  height: 28px;
+  border-radius: 7px;
+  background: var(--theme-accent-primary);
+  border: 1px solid color-mix(in srgb, var(--theme-accent-primary) 85%, #ffffff);
+  box-shadow:
+    0 0 10px color-mix(in srgb, var(--theme-accent-primary) 45%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+  transition: top 320ms cubic-bezier(0.22, 0.61, 0.36, 1), box-shadow 180ms ease;
+  will-change: top;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 3px;
+}
+
+.volya-gear-knob::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 5px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(255, 255, 255, 0.06) 35%,
+    rgba(0, 0, 0, 0.1) 100%
+  );
+}
+
+.volya-gear-low {
+  flex: 1;
+  min-width: 0;
+  height: 120px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin-top: 123px;
+  overflow: hidden;
+}
+
+.volya-gear-low-slot {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: var(--theme-text-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  line-height: 1;
+}
+
+.volya-gear-low-slot.active {
+  color: var(--theme-accent-primary);
+  font-weight: 700;
+  text-shadow: 0 0 10px color-mix(in srgb, var(--theme-accent-primary) 35%, transparent);
+}
+
+.volya-gear-arrow {
+  color: color-mix(in srgb, var(--theme-bg-dark) 55%, transparent);
+  font-size: 0.95rem;
+  line-height: 1;
+  transform: translateY(-0.5px);
+}
+
+
+/* ========== VOLYA MOVE / ASSIST INDICATORS ========== */
+.volya-status-indicator {
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 12px;
+  background: var(--theme-bg-overlay);
+  backdrop-filter: blur(8px);
+  border-color: var(--theme-accent-primary-border);
+  width: 160px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.volya-status-left {
+  flex: 0 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.volya-status-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.volya-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+
+.volya-status-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--theme-text-secondary);
+  }
+
+.volya-status-icon {
+  width: 28px;
+  height: 34px;
+  flex: 0 0 28px;
+  color: color-mix(in srgb, var(--theme-accent-primary) 52%, #002d18);
+  opacity: 0.6;
+}
+
+.volya-status-icon-part {
+  fill: currentColor;
+}
+
+.volya-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--theme-accent-primary-border);
+  transition: background 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+}
+
+.volya-status-dot.on {
+  background: var(--theme-accent-primary);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--theme-accent-primary) 65%, transparent);
+  opacity: 1;
+}
+
+.volya-status-dot.off {
+  background: color-mix(in srgb, var(--theme-bg-dark) 75%, var(--theme-text-muted));
+  box-shadow: none;
+  opacity: 0.55;
+}
+
+/* ========== VOLYA ATTITUDE DIAL (roll / pitch / yaw placeholders) ========== */
+.volya-attitude-dial {
+  margin-top: 10px;
+  width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.volya-attitude-slot {
+  position: relative;
+  width: 108px;
+  height: 108px;
+}
+
+.volya-attitude-ticks {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.volya-attitude-ticks line {
+  stroke: var(--theme-accent-primary);
+  stroke-width: 1;
+  stroke-linecap: round;
+}
+
+.volya-attitude-circle {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 1px solid var(--theme-accent-primary-border);
+  background: var(--theme-bg-overlay);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+}
+
+/* Roll circle internals */
+.volya-roll-ground {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 50%,
+    var(--theme-bg-overlay) 50%,
+    var(--theme-bg-overlay) 100%
+  );
+  transform-origin: 50% 50%;
+  transition: transform 180ms linear;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.volya-yaw-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 0.5px);
+  width: 1px;
+  height: 100%;
+  background: transparent;
+  transform-origin: 50% 50%;
+  transition: transform 180ms linear;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.volya-yaw-line::before,
+.volya-yaw-line::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 1px;
+  height: 14px;
+  background: color-mix(in srgb, var(--theme-accent-primary) 75%, transparent);
+  box-shadow:
+    0 0 3px color-mix(in srgb, var(--theme-accent-primary) 45%, transparent),
+    0 0 8px color-mix(in srgb, var(--theme-accent-primary) 22%, transparent);
+}
+
+.volya-yaw-line::before {
+  top: 0;
+}
+
+.volya-yaw-line::after {
+  bottom: 0;
+}
+
+.volya-roll-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  width: 100%;
+  height: 1px;
+  background: color-mix(in srgb, var(--theme-accent-primary) 55%, transparent);
+  z-index: 1;
+  box-shadow:
+    0 0 3px color-mix(in srgb, var(--theme-accent-primary) 35%, transparent),
+    0 0 8px color-mix(in srgb, var(--theme-accent-primary) 18%, transparent);
+  transform-origin: 50% 50%;
+  transition: transform 180ms linear;
+  pointer-events: none;
+}
+
+.volya-yaw-icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: 50% 50%;
+  transform: translate(-50%, -50%);
+  transition: transform 180ms linear;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--theme-accent-primary);
+  z-index: 2;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--theme-accent-primary) 45%, transparent));
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.volya-roll-icon {
+  position: absolute;
+  left: 50%;
+  bottom: 50%;
+  transform-origin: 50% 100%;
+  transform: translate(-50%, 3px);
+  transition: transform 180ms linear;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  color: var(--theme-accent-primary);
+  z-index: 2;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--theme-accent-primary) 45%, transparent));
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.volya-roll-readout {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  margin-top: 4px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.volya-roll-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.55rem;
+  letter-spacing: 1.5px;
+  color: var(--theme-text-secondary);
+  margin-top: 4px;
+}
+
+.volya-roll-value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--theme-accent-primary);
+  text-shadow:
+    0 0 4px color-mix(in srgb, var(--theme-accent-primary) 35%, transparent),
+    0 0 10px color-mix(in srgb, var(--theme-accent-primary) 15%, transparent);
+}
+
+.volya-yaw-value {
+  position: absolute;
+  left: 50%;
+  top: 6px;
+  transform: translateX(-50%);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--theme-accent-primary);
+  text-shadow:
+    0 0 4px color-mix(in srgb, var(--theme-accent-primary) 35%, transparent),
+    0 0 10px color-mix(in srgb, var(--theme-accent-primary) 15%, transparent);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.volya-yaw-label {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  transform: translateX(-50%);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.55rem;
+  letter-spacing: 1.5px;
+  line-height: 1;
+  color: var(--theme-text-secondary);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.volya-movement-arrow {
+  position: absolute;
+  top: 62%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--theme-accent-primary);
+  opacity: 0;
+  transition: opacity 220ms ease;
+  pointer-events: none;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--theme-accent-primary) 55%, transparent));
+}
+
+.volya-movement-arrow.front {
+  right: 100%;
+  margin-right: 1px;
+}
+
+.volya-movement-arrow.rear {
+  left: 100%;
+  margin-left: 1px;
+}
+
+.volya-movement-arrow.up {
+  top: auto;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 1px;
+}
+
+.volya-movement-arrow.down {
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 1px;
+}
+
+.volya-movement-arrow.visible {
+  opacity: 1;
+  animation: volyaArrowPulse 900ms ease-in-out infinite;
+}
+
+@keyframes volyaArrowPulse {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ========== VOLYA MINIMAP (wider and shorter than default) ========== */
+.volya-drone-osd .volya-minimap .map-panel {
+  width: 480px;
+}
+
+.volya-drone-osd .volya-minimap .map-body {
+  height: 160px;
+}
+
 /* ========== MAP PANEL LAYOUT (2x bigger with altimeter) ========== */
 .hud-minimap-container {
   position: absolute;
@@ -1728,6 +2223,11 @@ body {
   width: 80px;
   height: 80px;
   pointer-events: none;
+}
+
+/* Hide crosshair while main camera shows a status message (Foxy + Volya only) */
+.main-camera-bg:has(.status-content) ~ .hud-overlay:not(.flying-drone-osd) .hud-crosshair {
+  display: none;
 }
 
 .crosshair-h {

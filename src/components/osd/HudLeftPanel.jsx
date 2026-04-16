@@ -17,7 +17,8 @@ export function HudLeftPanel({
   hasHdStream,
   hdMode,
   onHdToggle,
-  showCompass = true
+  showCompass = true,
+  extraContent = null
 }) {
   return (
     <div className="hud-left-panel">
@@ -40,24 +41,28 @@ export function HudLeftPanel({
           {hasHdStream && (
             <QualitySwitch isHd={hdMode} onToggle={onHdToggle} />
           )}
+          {extraContent}
         </>
       ) : (
-        /* Flying OSD - no compass, no satellites (satellites in top bar), quality switch in place of satellites */
-        <div className="hud-info-row">
-          {hasHdStream && (
-            <QualitySwitch isHd={hdMode} onToggle={onHdToggle} />
-          )}
-          <span className="hud-drone-name">
-            {droneType === DRONE_TYPES.GENERIC_FPV ? (
-              <FpvDroneIcon size={20} active={true} />
-            ) : droneType === DRONE_TYPES.VOLYA ? (
-              <VolyaDroneIcon size={20} active={true} />
-            ) : (
-              <GroundDroneIcon size={20} active={true} />
+        <>
+          {/* Flying OSD - no compass, no satellites (satellites in top bar), quality switch in place of satellites */}
+          <div className="hud-info-row">
+            {hasHdStream && (
+              <QualitySwitch isHd={hdMode} onToggle={onHdToggle} />
             )}
-            {droneName.toUpperCase()}
-          </span>
-        </div>
+            <span className="hud-drone-name">
+              {droneType === DRONE_TYPES.GENERIC_FPV ? (
+                <FpvDroneIcon size={20} active={true} />
+              ) : droneType === DRONE_TYPES.VOLYA ? (
+                <VolyaDroneIcon size={20} active={true} />
+              ) : (
+                <GroundDroneIcon size={20} active={true} />
+              )}
+              {droneName.toUpperCase()}
+            </span>
+          </div>
+          {extraContent}
+        </>
       )}
     </div>
   )

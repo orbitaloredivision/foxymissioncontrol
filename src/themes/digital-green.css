@@ -341,7 +341,7 @@ body {
 }
 
 .sat-label {
-  color: var(--theme-text-muted);
+  color: var(--theme-text-secondary);
 }
 
 .sat-grid {
@@ -382,7 +382,7 @@ body {
 }
 
 .sat-quality {
-  color: var(--theme-text-muted);
+  color: var(--theme-text-secondary);
 }
 
 /* ========== QUALITY SWITCH THEME ========== */
@@ -573,6 +573,39 @@ body.theme-digital-green .map-theme-overlay {
 .power-mode.level-2 {
   color: var(--theme-accent-primary);
   text-shadow: 0 0 8px var(--theme-accent-primary-glow);
+}
+
+/* ========== VOLYA GEAR INDICATOR THEME ========== */
+.volya-gear-indicator,
+.volya-gear-rail,
+.volya-gear-main,
+.volya-gear-low {
+  background: var(--theme-bg-overlay);
+  border-color: var(--theme-accent-primary-border);
+}
+
+
+/* ========== VOLYA STATUS INDICATOR THEME ========== */
+.volya-status-indicator {
+  background: var(--theme-bg-overlay);
+  border-color: var(--theme-accent-primary-border);
+}
+
+.volya-status-label {
+  color: var(--theme-text-secondary);
+}
+
+.volya-status-dot {
+  border-color: var(--theme-accent-primary-border);
+}
+
+.volya-status-dot.on {
+  background: var(--theme-accent-primary);
+  box-shadow: 0 0 10px var(--theme-accent-primary-glow);
+}
+
+.volya-status-dot.off {
+  background: color-mix(in srgb, var(--theme-bg-dark) 75%, var(--theme-text-muted));
 }
 
 /* ========== MINIMAP THEME ========== */

@@ -12,6 +12,7 @@ import { isAuthenticated, setAuthCookie } from './utils/auth'
 import { DRONE_TYPES } from './telemetrySchemas'
 import GroundDroneOSD from './GroundDroneOSD'
 import FlyingDroneOSD from './FlyingDroneOSD'
+import VolyaDroneOSD from './VolyaDroneOSD'
 
 // API Configuration from config
 const API_BASE_URL = config.apiUrl
@@ -46,6 +47,12 @@ const createInitialState = () => ({
   speed: 0,
   dist: 0,
   power: 0,
+  arm: false,
+  park: false,
+  reverse: false,
+  gear: 1,
+  moving: false,
+  brake_assist: false,
   fs: 0,
   f1: false,
   f2: false,
@@ -351,6 +358,13 @@ function App() {
         updated.speed = data.speed ?? prev.speed
         updated.dist = data.dist ?? prev.dist
         updated.power = data.power ?? prev.power
+        updated.arm = data.arm ?? prev.arm
+        updated.park = data.park ?? prev.park
+        updated.reverse = data.reverse ?? prev.reverse
+        updated.gear = data.gear ?? prev.gear
+        updated.moving = data.moving ?? prev.moving
+        updated.brake_assist = data.brake_assist ?? prev.brake_assist
+        updated.mode = data.mode ?? prev.mode
         updated.fs = data.fs ?? prev.fs
         updated.f1 = data.f1 ?? prev.f1
         updated.f2 = data.f2 ?? prev.f2
@@ -416,6 +430,26 @@ function App() {
           directions={directions}
           directionIndex={directionIndex}
           tlogState={tlogState}
+        />
+      )
+    }
+
+    if (droneType === DRONE_TYPES.VOLYA) {
+      return (
+        <VolyaDroneOSD
+          telemetry={telemetry}
+          droneName={droneName}
+          droneType={droneType}
+          isActive={isActive}
+          elrsConnected={elrsConnected}
+          hdMode={hdMode}
+          onHdToggle={() => setHdMode(!hdMode)}
+          mainCameraUrl={mainCameraUrl}
+          hasHdStream={hasHdStream}
+          onShareClick={() => setShowShareModal(true)}
+          onControlClick={handleControlIconClick}
+          directions={directions}
+          directionIndex={directionIndex}
         />
       )
     }
