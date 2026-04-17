@@ -13,6 +13,7 @@ import {
   TelemetryStrip,
   MapPanel
 } from '..'
+import { useMapResize } from '../useMapResize'
 
 export function VolyaMainCamera({ streamUrl }) {
   return (
@@ -29,7 +30,7 @@ export function VolyaHudTopBar({ telemetry, isActive, onShareClick }) {
       isActive={isActive}
       onShareClick={onShareClick}
       showFailsafe={false}
-      showFlightMode={true}
+      showFlightMode={false}
       showStatusMode={true}
     />
   )
@@ -74,15 +75,20 @@ export function VolyaHudLeftPanel({
   )
 }
 
-export function VolyaHudRightPanel({ speed, dist, arm, park, reverse, gear, moving, brakeAssist }) {
-  const mainGear = park ? 'P' : reverse ? 'R' : arm ? 'D' : 'P'
+export function VolyaHudRightPanel({ speed, dist, arm, park, reverse, gear, moving, brakeAssist, mode }) {
+  let mainGear
+  if (park) mainGear = 'P'
+  else if (reverse) mainGear = 'R'
+  else if (arm) mainGear = 'D'
+  else if (!brakeAssist) mainGear = 'N'
+  else mainGear = 'P'
   const lowGear = mainGear === 'D' ? (gear ?? 1) : gear
 
   return (
     <div className="hud-right-panel">
       <Speedometer speed={speed} dist={dist} />
       <VolyaGearIndicator mainGear={mainGear} lowGear={lowGear} />
-      <VolyaStatusIndicators moving={moving} brakeAssist={brakeAssist} />
+      <VolyaStatusIndicators moving={moving} brakeAssist={brakeAssist} mode={mode} />
     </div>
   )
 }
@@ -104,11 +110,29 @@ export function VolyaActiveControl({ isActive, elrsConnected, onClick }) {
 export function VolyaMiniMap({ telemetry }) {
   const { t } = useTranslation()
   const [mapVisible, setMapVisible] = useState(true)
+  const mapResize = useMapResize()
 
   return (
     <div className="hud-minimap-container volya-minimap">
       {mapVisible ? (
-        <div className="map-panel-wrapper">
+        <div
+          ref={mapResize.wrapperRef}
+          className={`map-panel-wrapper ${mapResize.className}`.trim()}
+          style={mapResize.style}
+        >
+          <button
+            className="map-resize-btn"
+            onMouseDown={mapResize.beginResize}
+            title={t('osd.resizeMap', 'Drag to resize map')}
+            aria-label={t('osd.resizeMap', 'Drag to resize map')}
+          >
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3,7 3,3 7,3" />
+              <polyline points="13,9 13,13 9,13" />
+              <line x1="3" y1="3" x2="7" y2="7" />
+              <line x1="13" y1="13" x2="9" y2="9" />
+            </svg>
+          </button>
           <button
             className="map-close-btn"
             onClick={() => setMapVisible(false)}

@@ -1488,7 +1488,7 @@ body {
 
 .volya-gear-rail {
   position: relative;
-  flex: 1;
+  flex: 0.4 1 0;
   min-width: 0;
   height: 160px;
   border-width: 1px;
@@ -1690,6 +1690,18 @@ body {
   opacity: 0.55;
 }
 
+.volya-status-value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  line-height: 1;
+  color: var(--theme-accent-primary);
+  text-shadow:
+    0 0 4px color-mix(in srgb, var(--theme-accent-primary) 35%, transparent),
+    0 0 10px color-mix(in srgb, var(--theme-accent-primary) 15%, transparent);
+}
+
 /* ========== VOLYA ATTITUDE DIAL (roll / pitch / yaw placeholders) ========== */
 .volya-attitude-dial {
   margin-top: 10px;
@@ -1719,6 +1731,7 @@ body {
   stroke: var(--theme-accent-primary);
   stroke-width: 1;
   stroke-linecap: round;
+  transition: stroke 300ms ease;
 }
 
 .volya-attitude-circle {
@@ -1730,6 +1743,7 @@ body {
   background: var(--theme-bg-overlay);
   backdrop-filter: blur(8px);
   overflow: hidden;
+  transition: border-color 300ms ease, background 300ms ease;
 }
 
 /* Roll circle internals */
@@ -1793,6 +1807,7 @@ body {
   height: 1px;
   background: color-mix(in srgb, var(--theme-accent-primary) 55%, transparent);
   z-index: 1;
+  transition: background 300ms ease, box-shadow 300ms ease;
   box-shadow:
     0 0 3px color-mix(in srgb, var(--theme-accent-primary) 35%, transparent),
     0 0 8px color-mix(in srgb, var(--theme-accent-primary) 18%, transparent);
@@ -1807,7 +1822,7 @@ body {
   top: 50%;
   transform-origin: 50% 50%;
   transform: translate(-50%, -50%);
-  transition: transform 180ms linear;
+  transition: transform 180ms linear, color 300ms ease, filter 300ms ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1824,7 +1839,7 @@ body {
   bottom: 50%;
   transform-origin: 50% 100%;
   transform: translate(-50%, 3px);
-  transition: transform 180ms linear;
+  transition: transform 180ms linear, color 300ms ease, filter 300ms ease;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -1865,6 +1880,7 @@ body {
   text-shadow:
     0 0 4px color-mix(in srgb, var(--theme-accent-primary) 35%, transparent),
     0 0 10px color-mix(in srgb, var(--theme-accent-primary) 15%, transparent);
+  transition: color 300ms ease, text-shadow 300ms ease;
 }
 
 .volya-yaw-value {
@@ -1907,7 +1923,7 @@ body {
   justify-content: center;
   color: var(--theme-accent-primary);
   opacity: 0;
-  transition: opacity 220ms ease;
+  transition: opacity 220ms ease, color 300ms ease, filter 300ms ease;
   pointer-events: none;
   filter: drop-shadow(0 0 3px color-mix(in srgb, var(--theme-accent-primary) 55%, transparent));
 }
@@ -1951,13 +1967,75 @@ body {
   }
 }
 
+/* Warning state (angle out of -10..10 range) — switches accents to orange */
+.volya-attitude-slot.warning .volya-attitude-circle {
+  border-color: var(--theme-status-warning-border);
+}
+
+.volya-attitude-slot.warning .volya-attitude-ticks line {
+  stroke: var(--theme-status-warning);
+}
+
+.volya-attitude-slot.warning .volya-roll-line {
+  background: color-mix(in srgb, var(--theme-status-warning) 55%, transparent);
+}
+
+.volya-attitude-slot.warning .volya-roll-icon,
+.volya-attitude-slot.warning .volya-yaw-icon {
+  color: var(--theme-status-warning);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--theme-status-warning) 45%, transparent));
+}
+
+.volya-attitude-slot.warning .volya-roll-value {
+  color: var(--theme-status-warning);
+  text-shadow:
+    0 0 4px color-mix(in srgb, var(--theme-status-warning) 35%, transparent),
+    0 0 10px color-mix(in srgb, var(--theme-status-warning) 15%, transparent);
+}
+
+.volya-attitude-slot.warning .volya-movement-arrow {
+  color: var(--theme-status-warning);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--theme-status-warning) 55%, transparent));
+}
+
+/* Critical state (angle out of -20..20 range) — switches accents to red */
+.volya-attitude-slot.critical .volya-attitude-circle {
+  border-color: var(--theme-status-critical-border);
+}
+
+.volya-attitude-slot.critical .volya-attitude-ticks line {
+  stroke: var(--theme-status-critical);
+}
+
+.volya-attitude-slot.critical .volya-roll-line {
+  background: color-mix(in srgb, var(--theme-status-critical) 55%, transparent);
+}
+
+.volya-attitude-slot.critical .volya-roll-icon,
+.volya-attitude-slot.critical .volya-yaw-icon {
+  color: var(--theme-status-critical);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--theme-status-critical) 45%, transparent));
+}
+
+.volya-attitude-slot.critical .volya-roll-value {
+  color: var(--theme-status-critical);
+  text-shadow:
+    0 0 4px color-mix(in srgb, var(--theme-status-critical) 35%, transparent),
+    0 0 10px color-mix(in srgb, var(--theme-status-critical) 15%, transparent);
+}
+
+.volya-attitude-slot.critical .volya-movement-arrow {
+  color: var(--theme-status-critical);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--theme-status-critical) 55%, transparent));
+}
+
 /* ========== VOLYA MINIMAP (wider and shorter than default) ========== */
 .volya-drone-osd .volya-minimap .map-panel {
   width: 480px;
 }
 
 .volya-drone-osd .volya-minimap .map-body {
-  height: 160px;
+  height: 144px;
 }
 
 /* ========== MAP PANEL LAYOUT (2x bigger with altimeter) ========== */
@@ -1997,6 +2075,62 @@ body {
   color: var(--theme-status-danger, #ff4444);
   background: rgba(255, 68, 68, 0.15);
   border-color: var(--theme-status-danger, #ff4444);
+}
+
+/* Resize button - top-left, visible only on wrapper hover */
+.map-resize-btn {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  z-index: 10;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--theme-border);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.85);
+  color: var(--theme-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.map-panel-wrapper:hover .map-resize-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.map-resize-btn:hover {
+  color: var(--theme-accent-primary, #00ff88);
+  background: color-mix(in srgb, var(--theme-accent-primary, #00ff88) 15%, rgba(0, 0, 0, 0.85));
+  border-color: var(--theme-accent-primary, #00ff88);
+}
+
+/* Drag-based map resize: when .sized is present, CSS vars on the wrapper
+   drive width/height of the panel and body. !important is used so these
+   override per-OSD default widths (e.g. Volya's custom minimap sizing). */
+.map-panel-wrapper.sized .map-panel {
+  width: var(--map-panel-width) !important;
+}
+
+.map-panel-wrapper.sized .map-body {
+  height: var(--map-body-height) !important;
+}
+
+/* While actively dragging, lock cursor and disable text selection */
+.map-panel-wrapper.resizing,
+.map-panel-wrapper.resizing * {
+  user-select: none;
+  cursor: nwse-resize !important;
+}
+
+.map-panel-wrapper.resizing .map-resize-btn {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* Globe button to restore hidden map */

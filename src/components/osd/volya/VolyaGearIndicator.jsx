@@ -4,7 +4,7 @@
  */
 export function VolyaGearIndicator({ mainGear = 'P', lowGear = null }) {
   const mainSlots = ['P', 'R', 'N', 'D']
-  const selectableMainSlots = ['P', 'R', 'D']
+  const selectableMainSlots = ['P', 'R', 'N', 'D']
   const lowSlots = ['1', '2', '3']
 
   const normalizedMain = selectableMainSlots.includes(mainGear) ? mainGear : 'P'
@@ -12,6 +12,7 @@ export function VolyaGearIndicator({ mainGear = 'P', lowGear = null }) {
   const knobTopByGear = {
     P: 8,
     R: 48,
+    N: 88,
     D: 128
   }
   const knobTop = knobTopByGear[normalizedMain] ?? knobTopByGear.P
@@ -33,7 +34,7 @@ export function VolyaGearIndicator({ mainGear = 'P', lowGear = null }) {
           {mainSlots.map((slot) => (
             <div
               key={slot}
-              className={`volya-gear-slot ${normalizedMain === slot ? 'active' : ''} ${slot === 'N' ? 'disabled' : ''}`}
+              className={`volya-gear-slot ${normalizedMain === slot ? 'active' : ''}`}
             >
               <span className="volya-gear-symbol">{slot}</span>
             </div>

@@ -21,6 +21,7 @@ import {
   ControlIcon,
   Crosshair
 } from './components/osd'
+import { useMapResize } from './components/osd/useMapResize'
 
 /**
  * Ground Drone OSD Component
@@ -46,6 +47,7 @@ export default function GroundDroneOSD({
   const isUgv = droneType === DRONE_TYPES.UGV || droneType === DRONE_TYPES.VOLYA
   const [mapVisible, setMapVisible] = useState(true)
   const [mirrorVisible, setMirrorVisible] = useState(true)
+  const mapResize = useMapResize()
   
   return (
     <>
@@ -133,7 +135,24 @@ export default function GroundDroneOSD({
         {/* Map with integrated Altimeter */}
         <div className="hud-minimap-container">
           {mapVisible ? (
-            <div className="map-panel-wrapper">
+            <div
+              ref={mapResize.wrapperRef}
+              className={`map-panel-wrapper ${mapResize.className}`.trim()}
+              style={mapResize.style}
+            >
+              <button
+                className="map-resize-btn"
+                onMouseDown={mapResize.beginResize}
+                title={t('osd.resizeMap', 'Drag to resize map')}
+                aria-label={t('osd.resizeMap', 'Drag to resize map')}
+              >
+                <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3,7 3,3 7,3" />
+                  <polyline points="13,9 13,13 9,13" />
+                  <line x1="3" y1="3" x2="7" y2="7" />
+                  <line x1="13" y1="13" x2="9" y2="9" />
+                </svg>
+              </button>
               <button
                 className="map-close-btn"
                 onClick={() => setMapVisible(false)}

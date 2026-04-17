@@ -64,6 +64,7 @@ export default function VolyaDroneOSD({
           gear={telemetry.gear}
           moving={telemetry.moving}
           brakeAssist={telemetry.brake_assist}
+          mode={telemetry.mode}
         />
 
         <VolyaMiniMap telemetry={telemetry} />

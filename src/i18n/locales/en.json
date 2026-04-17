@@ -65,7 +65,13 @@
     "armed": "ARMED",
     "mapError": "Map Error",
     "checkApiKey": "Check API Key",
-    "loadingMap": "Loading Map..."
+    "loadingMap": "Loading Map...",
+    "moving": "MOVING",
+    "assist": "ASSIST",
+    "mode": "MODE",
+    "hideMap": "Hide map",
+    "showMap": "Show map",
+    "resizeMap": "Drag to resize map"
   },
   
   "telemetry": {

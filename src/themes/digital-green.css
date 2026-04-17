@@ -24,9 +24,18 @@ body.theme-digital-green {
   
   /* Status colors */
   --theme-status-warning: #ffaa00;
+  --theme-status-warning-rgb: 255, 170, 0;
   --theme-status-warning-dim: rgba(255, 170, 0, 0.15);
+  --theme-status-warning-border: rgba(255, 170, 0, 0.3);
+  --theme-status-warning-glow: rgba(255, 170, 0, 0.4);
   --theme-status-danger: #ff4466;
   --theme-status-danger-dim: rgba(255, 68, 102, 0.15);
+  /* Critical status — matches aggressive-red theme primary red */
+  --theme-status-critical: #ff2244;
+  --theme-status-critical-rgb: 255, 34, 68;
+  --theme-status-critical-dim: rgba(255, 34, 68, 0.15);
+  --theme-status-critical-border: rgba(255, 34, 68, 0.3);
+  --theme-status-critical-glow: rgba(255, 34, 68, 0.4);
   
   /* Text colors */
   --theme-text-primary: #e6edf3;

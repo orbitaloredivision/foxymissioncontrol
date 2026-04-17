@@ -2,6 +2,7 @@
  * Volya Status Indicators
  * MOVE and ASSIST status lights for Volya HUD.
  */
+import { useTranslation } from 'react-i18next'
 
 function DriveIcon() {
   return (
@@ -27,7 +28,12 @@ function DriveIcon() {
   )
 }
 
-export function VolyaStatusIndicators({ moving = false, brakeAssist = false }) {
+export function VolyaStatusIndicators({ moving = false, brakeAssist = false, mode }) {
+  const { t } = useTranslation()
+  const modeDisplay = mode === undefined || mode === null || mode === '' ? '—' : mode
+  const movingLabel = t('osd.moving')
+  const assistLabel = t('osd.assist')
+  const modeLabel = t('osd.mode')
   return (
     <div className="volya-status-indicator">
       <div className="volya-status-left">
@@ -36,13 +42,18 @@ export function VolyaStatusIndicators({ moving = false, brakeAssist = false }) {
 
       <div className="volya-status-right">
         <div className="volya-status-row">
-          <span className="volya-status-label">MOVING</span>
-          <span className={`volya-status-dot ${moving ? 'on' : 'off'}`} aria-label={`MOVING ${moving ? 'on' : 'off'}`} />
+          <span className="volya-status-label">{movingLabel}</span>
+          <span className={`volya-status-dot ${moving ? 'on' : 'off'}`} aria-label={`${movingLabel} ${moving ? 'on' : 'off'}`} />
         </div>
 
         <div className="volya-status-row">
-          <span className="volya-status-label">ASSIST</span>
-          <span className={`volya-status-dot ${brakeAssist ? 'on' : 'off'}`} aria-label={`ASSIST ${brakeAssist ? 'on' : 'off'}`} />
+          <span className="volya-status-label">{assistLabel}</span>
+          <span className={`volya-status-dot ${brakeAssist ? 'on' : 'off'}`} aria-label={`${assistLabel} ${brakeAssist ? 'on' : 'off'}`} />
+        </div>
+
+        <div className="volya-status-row">
+          <span className="volya-status-label">{modeLabel}</span>
+          <span className="volya-status-value" aria-label={`${modeLabel} ${modeDisplay}`}>{modeDisplay}</span>
         </div>
       </div>
     </div>

@@ -14,7 +14,7 @@ function isDemoEnabled() {
   return new URLSearchParams(window.location.search).has('demoRoll')
 }
 
-function useDemoValue(enabled, range = 15) {
+function useDemoValue(enabled, range = 25) {
   const [value, setValue] = useState(0)
   const targetRef = useRef(0)
   const currentRef = useRef(0)
@@ -172,9 +172,19 @@ function AttitudeTicks({ orientation = 'horizontal' }) {
   )
 }
 
-function AttitudeSlot({ children, ariaLabel, orientation = 'horizontal' }) {
+function AttitudeSlot({
+  children,
+  ariaLabel,
+  orientation = 'horizontal',
+  warning = false,
+  critical = false,
+}) {
+  const stateClass = critical ? 'critical' : warning ? 'warning' : ''
   return (
-    <div className="volya-attitude-slot" aria-label={ariaLabel}>
+    <div
+      className={`volya-attitude-slot ${stateClass}`.trim()}
+      aria-label={ariaLabel}
+    >
       {children}
       <AttitudeTicks orientation={orientation} />
     </div>
@@ -188,8 +198,10 @@ function AxisCircle({
   Icon = VolyaDroneIcon,
   showFrontArrow = false,
   showRearArrow = false,
+  displayCoefficient = 1,
 }) {
   const v = Number.isFinite(value) ? value : 0
+  const displayValue = v * displayCoefficient
 
   return (
     <div className={`volya-attitude-circle volya-roll-circle ${axisClass}`}>
@@ -222,7 +234,7 @@ function AxisCircle({
         </span>
       </div>
       <div className="volya-roll-readout">
-        <span className="volya-roll-value">{v.toFixed(1)}°</span>
+        <span className="volya-roll-value">{Math.round(displayValue)}°</span>
         <span className="volya-roll-label">{label}</span>
       </div>
     </div>
@@ -295,12 +307,27 @@ export default function VolyaAttitudeDial({
   const showFront = effectiveMoving && !effectiveReverse
   const showRear = effectiveMoving && effectiveReverse
 
+  const rollAbs = Math.abs(rollValue)
+  const pitchAbs = Math.abs(pitchValue)
+  const rollWarning = rollAbs > 10
+  const rollCritical = rollAbs > 20
+  const pitchWarning = pitchAbs > 10
+  const pitchCritical = pitchAbs > 20
+
   return (
     <div className="volya-attitude-dial" aria-label="Volya attitude indicators">
-      <AttitudeSlot ariaLabel={`Roll ${rollValue.toFixed(1)} degrees`}>
+      <AttitudeSlot
+        ariaLabel={`Roll ${Math.round(rollValue)} degrees`}
+        warning={rollWarning}
+        critical={rollCritical}
+      >
         <AxisCircle value={effectiveRoll} label="ROLL" axisClass="volya-axis-roll" />
       </AttitudeSlot>
-      <AttitudeSlot ariaLabel={`Pitch ${pitchValue.toFixed(1)} degrees`}>
+      <AttitudeSlot
+        ariaLabel={`Pitch ${Math.round(pitchValue)} degrees`}
+        warning={pitchWarning}
+        critical={pitchCritical}
+      >
         <AxisCircle
           value={effectivePitch}
           label="PITCH"
@@ -308,6 +335,7 @@ export default function VolyaAttitudeDial({
           Icon={VolyaDroneSideIcon}
           showFrontArrow={showRear}
           showRearArrow={showFront}
+          displayCoefficient={-1}
         />
       </AttitudeSlot>
       <AttitudeSlot ariaLabel={`Yaw ${yawValue.toFixed(0)} degrees`} orientation="vertical">
