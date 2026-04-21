@@ -18,6 +18,7 @@ import {
   SlipSkidIndicator,
   HeadingCompassArc
 } from './components/osd'
+import { useDronePref } from './hooks/useDronePref'
 
 /**
  * Flying Drone OSD Component
@@ -37,12 +38,13 @@ export default function FlyingDroneOSD({
   onControlClick,
   directions,
   directionIndex,
-  tlogState
+  tlogState,
+  droneId
 }) {
   const { t } = useTranslation()
-  
-  // Toggle states for OSD elements (not persisted, reset on refresh)
-  const [mapVisible, setMapVisible] = useState(true)
+
+  // Map visibility persists per drone in cookies; osdVisible stays session-local.
+  const [mapVisible, setMapVisible] = useDronePref(droneId, 'mapVisible', true)
   const [osdVisible, setOsdVisible] = useState(true)
   
   return (
@@ -83,6 +85,7 @@ export default function FlyingDroneOSD({
           hdMode={hdMode}
           onHdToggle={onHdToggle}
           showCompass={false}
+          droneId={droneId}
         />
         
         {/* OSD elements - can be toggled off */}
@@ -122,6 +125,7 @@ export default function FlyingDroneOSD({
           <FlyingTelemetryStrip 
             telemetry={telemetry} 
             droneType={droneType} 
+            droneId={droneId}
             tlogState={tlogState}
             mapVisible={mapVisible}
             osdVisible={osdVisible}

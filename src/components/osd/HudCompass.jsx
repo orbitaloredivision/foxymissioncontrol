@@ -1,13 +1,25 @@
 /**
  * HUD Compass Component
- * Rotating compass with heading readout
+ * Rotating compass with heading readout. Optional close button shown on hover
+ * when `onClose` is provided (parent can hide/restore the widget).
  */
 import { useTranslation } from 'react-i18next'
 
-export function HudCompass({ heading, direction }) {
+export function HudCompass({ heading, direction, onClose }) {
   const { t } = useTranslation()
   return (
     <div className="hud-compass">
+      {onClose && (
+        <button
+          type="button"
+          className="hud-widget-close-btn"
+          onClick={onClose}
+          title={t('osd.hideCompass', 'Hide compass')}
+          aria-label={t('osd.hideCompass', 'Hide compass')}
+        >
+          ×
+        </button>
+      )}
       <div className="compass-outer">
         <div className="compass-ring" style={{ transform: `rotate(${-heading}deg)` }}>
           <span className="compass-n">{t('compass.n')}</span>

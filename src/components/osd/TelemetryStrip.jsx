@@ -3,13 +3,13 @@
  * Collapsible bottom telemetry data display
  * Uses telemetry schema to display fields based on drone type
  */
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DRONE_TYPES, getDisplayFields, formatValueWithUnit } from '../../telemetrySchemas'
+import { useDronePref } from '../../hooks/useDronePref'
 
-export function TelemetryStrip({ telemetry, droneType = DRONE_TYPES.FOXY }) {
+export function TelemetryStrip({ telemetry, droneType = DRONE_TYPES.FOXY, droneId = null }) {
   const { t } = useTranslation()
-  const [isCollapsed, setIsCollapsed] = useState(true)
+  const [isCollapsed, setIsCollapsed] = useDronePref(droneId, 'bottomStripCollapsed', true)
   
   // Get display fields based on drone type from schema
   const displayFields = getDisplayFields(droneType)

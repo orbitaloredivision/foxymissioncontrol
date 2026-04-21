@@ -73,7 +73,11 @@
     "mode": "Режим",
     "hideMap": "Сховати карту",
     "showMap": "Показати карту",
-    "resizeMap": "Перетягніть щоб змінити розмір карти"
+    "resizeMap": "Перетягніть щоб змінити розмір карти",
+    "hideCompass": "Сховати компас",
+    "showCompass": "Показати компас",
+    "hideSatellites": "Сховати супутники",
+    "showSatellites": "Показати супутники"
   },
   
   "telemetry": {
@@ -178,6 +182,12 @@
     "frontCameraUrl": "URL передньої камери (WebRTC)",
     "frontCameraPlaceholder": "/webrtc/cam1/whep",
     "frontCameraHint": "WebRTC потік для основного виду камери",
+    "frontCameraUrlSd": "URL передньої камери SD (WebRTC)",
+    "frontCameraSdPlaceholder": "/webrtc/cam1/whep",
+    "frontCameraSdHint": "WebRTC потік SD якості (за замовчуванням)",
+    "frontCameraUrlHd": "URL передньої камери HD (WebRTC)",
+    "frontCameraHdPlaceholder": "/webrtc/cam1_hd/whep",
+    "frontCameraHdHint": "WebRTC потік HD якості. Залиште порожнім, якщо недоступно; коли вказано — на екрані дрона з'явиться перемикач HD/SD.",
     "rearCameraUrl": "URL задньої камери (WebRTC)",
     "rearCameraPlaceholder": "/webrtc/cam2/whep",
     "rearCameraHint": "WebRTC потік для заднього виду",

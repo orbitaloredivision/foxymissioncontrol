@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import CameraFeed from '../../CameraFeed'
 import VolyaGearIndicator from './VolyaGearIndicator'
@@ -14,6 +13,7 @@ import {
   MapPanel
 } from '..'
 import { useMapResize } from '../useMapResize'
+import { useDronePref } from '../../../hooks/useDronePref'
 
 export function VolyaMainCamera({ streamUrl }) {
   return (
@@ -49,7 +49,8 @@ export function VolyaHudLeftPanel({
   roll,
   yaw,
   moving,
-  reverse
+  reverse,
+  droneId
 }) {
   return (
     <HudLeftPanel
@@ -62,6 +63,7 @@ export function VolyaHudLeftPanel({
       hdMode={hdMode}
       onHdToggle={onHdToggle}
       showCompass={true}
+      droneId={droneId}
       extraContent={
         <VolyaAttitudeDial
           pitch={pitch}
@@ -107,10 +109,10 @@ export function VolyaActiveControl({ isActive, elrsConnected, onClick }) {
   )
 }
 
-export function VolyaMiniMap({ telemetry }) {
+export function VolyaMiniMap({ telemetry, droneId }) {
   const { t } = useTranslation()
-  const [mapVisible, setMapVisible] = useState(true)
-  const mapResize = useMapResize()
+  const [mapVisible, setMapVisible] = useDronePref(droneId, 'mapVisible', true)
+  const mapResize = useMapResize({ droneId })
 
   return (
     <div className="hud-minimap-container volya-minimap">
@@ -165,10 +167,10 @@ export function VolyaMiniMap({ telemetry }) {
   )
 }
 
-export function VolyaBottomStrip({ telemetry, droneType }) {
+export function VolyaBottomStrip({ telemetry, droneType, droneId }) {
   return (
     <div className="hud-bottom-strip">
-      <TelemetryStrip telemetry={telemetry} droneType={droneType} />
+      <TelemetryStrip telemetry={telemetry} droneType={droneType} droneId={droneId} />
     </div>
   )
 }

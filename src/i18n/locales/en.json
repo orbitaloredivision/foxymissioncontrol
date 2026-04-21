@@ -71,7 +71,11 @@
     "mode": "MODE",
     "hideMap": "Hide map",
     "showMap": "Show map",
-    "resizeMap": "Drag to resize map"
+    "resizeMap": "Drag to resize map",
+    "hideCompass": "Hide compass",
+    "showCompass": "Show compass",
+    "hideSatellites": "Hide satellites",
+    "showSatellites": "Show satellites"
   },
   
   "telemetry": {
@@ -176,6 +180,12 @@
     "frontCameraUrl": "Front Camera URL (WebRTC)",
     "frontCameraPlaceholder": "/webrtc/cam1/whep",
     "frontCameraHint": "WebRTC stream URL for main camera view",
+    "frontCameraUrlSd": "Front Camera URL SD (WebRTC)",
+    "frontCameraSdPlaceholder": "/webrtc/cam1/whep",
+    "frontCameraSdHint": "WebRTC stream URL for SD quality (default)",
+    "frontCameraUrlHd": "Front Camera URL HD (WebRTC)",
+    "frontCameraHdPlaceholder": "/webrtc/cam1_hd/whep",
+    "frontCameraHdHint": "WebRTC stream URL for HD quality. Leave empty if unavailable; when set, enables the HD/SD toggle on the drone view.",
     "rearCameraUrl": "Rear Camera URL (WebRTC)",
     "rearCameraPlaceholder": "/webrtc/cam2/whep",
     "rearCameraHint": "WebRTC stream URL for rear view mirror",

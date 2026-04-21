@@ -173,6 +173,7 @@ const defaultProfile = {
   rearCamera: null,
   // Legacy fields for backwards compatibility
   frontCameraUrl: '',
+  frontCameraUrlHd: '',
   rearCameraUrl: '',
   color: '#00ff88',
   crsf_speed: null,
@@ -959,18 +960,31 @@ function ProfileForm({ droneId, profile, onSave, onCancel, onDelete, saveError }
       </div>
       
       <div className="form-group">
-        <label htmlFor={`frontCamera-${droneId}`}>{t('profile.frontCameraUrl')}</label>
+        <label htmlFor={`frontCamera-${droneId}`}>{t('profile.frontCameraUrlSd')}</label>
         <input
           id={`frontCamera-${droneId}`}
           name="frontCameraUrl"
           type="text"
           value={formData.frontCameraUrl}
           onChange={handleChange}
-          placeholder={t('profile.frontCameraPlaceholder')}
+          placeholder={t('profile.frontCameraSdPlaceholder')}
         />
-        <span className="form-hint">{t('profile.frontCameraHint')}</span>
+        <span className="form-hint">{t('profile.frontCameraSdHint')}</span>
       </div>
-      
+
+      <div className="form-group">
+        <label htmlFor={`frontCameraHd-${droneId}`}>{t('profile.frontCameraUrlHd')}</label>
+        <input
+          id={`frontCameraHd-${droneId}`}
+          name="frontCameraUrlHd"
+          type="text"
+          value={formData.frontCameraUrlHd || ''}
+          onChange={handleChange}
+          placeholder={t('profile.frontCameraHdPlaceholder')}
+        />
+        <span className="form-hint">{t('profile.frontCameraHdHint')}</span>
+      </div>
+
       <div className="form-group">
         <label htmlFor={`rearCamera-${droneId}`}>{t('profile.rearCameraUrl')}</label>
         <input

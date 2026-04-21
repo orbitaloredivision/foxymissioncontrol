@@ -13,6 +13,7 @@ import { DRONE_TYPES } from './telemetrySchemas'
 import GroundDroneOSD from './GroundDroneOSD'
 import FlyingDroneOSD from './FlyingDroneOSD'
 import VolyaDroneOSD from './VolyaDroneOSD'
+import { useDronePref } from './hooks/useDronePref'
 
 // API Configuration from config
 const API_BASE_URL = config.apiUrl
@@ -430,6 +431,7 @@ function App() {
           directions={directions}
           directionIndex={directionIndex}
           tlogState={tlogState}
+          droneId={droneId}
         />
       )
     }
@@ -445,11 +447,13 @@ function App() {
           hdMode={hdMode}
           onHdToggle={() => setHdMode(!hdMode)}
           mainCameraUrl={mainCameraUrl}
+          rearCameraUrl={rearCameraUrl}
           hasHdStream={hasHdStream}
           onShareClick={() => setShowShareModal(true)}
           onControlClick={handleControlIconClick}
           directions={directions}
           directionIndex={directionIndex}
+          droneId={droneId}
         />
       )
     }
@@ -471,6 +475,7 @@ function App() {
         onControlClick={handleControlIconClick}
         directions={directions}
         directionIndex={directionIndex}
+        droneId={droneId}
       />
     )
   }
@@ -1162,7 +1167,7 @@ function TelemetryLog({ droneId, onTelemetryUpdate, onStateChange }) {
   const { t } = useTranslation()
   const [records, setRecords] = useState([])
   const [connectionStatus, setConnectionStatus] = useState('connecting')
-  const [isCollapsed, setIsCollapsed] = useState(true) // Default collapsed
+  const [isCollapsed, setIsCollapsed] = useDronePref(droneId, 'tlogCollapsed', true)
   const [heartbeats, setHeartbeats] = useState([]) // Track heartbeat events with timestamps
   const lastIdRef = useRef(0)
   const isFirstFetch = useRef(true) // Skip heartbeat on initial historical data load

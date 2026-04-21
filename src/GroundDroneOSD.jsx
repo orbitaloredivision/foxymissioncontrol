@@ -4,7 +4,6 @@
  * For Foxy: includes fuse switches, rear mirror, armed warning.
  * For UGV: fuse switches, rear mirror, and armed styling are hidden.
  */
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DRONE_TYPES } from './telemetrySchemas'
 import CameraFeed from './components/CameraFeed'
@@ -16,12 +15,13 @@ import {
   PowerIndicator,
   MapPanel,
   HeadingTape,
-  WarningBanner,
   TelemetryStrip,
   ControlIcon,
-  Crosshair
+  Crosshair,
+  RearMirror
 } from './components/osd'
 import { useMapResize } from './components/osd/useMapResize'
+import { useDronePref } from './hooks/useDronePref'
 
 /**
  * Ground Drone OSD Component
@@ -41,13 +41,13 @@ export default function GroundDroneOSD({
   onShareClick,
   onControlClick,
   directions,
-  directionIndex
+  directionIndex,
+  droneId
 }) {
   const { t } = useTranslation()
   const isUgv = droneType === DRONE_TYPES.UGV || droneType === DRONE_TYPES.VOLYA
-  const [mapVisible, setMapVisible] = useState(true)
-  const [mirrorVisible, setMirrorVisible] = useState(true)
-  const mapResize = useMapResize()
+  const [mapVisible, setMapVisible] = useDronePref(droneId, 'mapVisible', true)
+  const mapResize = useMapResize({ droneId })
   
   return (
     <>
@@ -70,39 +70,12 @@ export default function GroundDroneOSD({
         {!isUgv && (
           <div className="hud-mirror-section">
             <FuseSwitch label="F1" armed={telemetry.f1} />
-            <div className="mirror-column">
-              <button
-                className="mirror-fold-btn"
-                onClick={() => setMirrorVisible(v => !v)}
-              >
-                {mirrorVisible ? (
-                  <svg viewBox="0 0 24 10" width="28" height="10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="4,9 12,3 20,9" />
-                    <polyline points="4,6 12,0 20,6" opacity="0.5" />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 10" width="28" height="10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="4,1 12,7 20,1" />
-                    <polyline points="4,4 12,10 20,4" opacity="0.5" />
-                  </svg>
-                )}
-              </button>
-              {mirrorVisible && (
-                <div className="rear-mirror">
-                  <div className="mirror-frame">
-                    <CameraFeed streamUrl={rearCameraUrl} variant="mirror" />
-                    <span className="mirror-label">{t('osd.rear')}</span>
-                  </div>
-                </div>
-              )}
-              <div className="mirror-heading-area">
-                {(telemetry.f1 && telemetry.f2) ? (
-                  <WarningBanner />
-                ) : (
-                  <HeadingTape heading={telemetry.heading} />
-                )}
-              </div>
-            </div>
+            <RearMirror
+              rearCameraUrl={rearCameraUrl}
+              heading={telemetry.heading}
+              showWarning={telemetry.f1 && telemetry.f2}
+              droneId={droneId}
+            />
             <FuseSwitch label="F2" armed={telemetry.f2} />
           </div>
         )}
@@ -124,6 +97,7 @@ export default function GroundDroneOSD({
           hasHdStream={hasHdStream}
           hdMode={hdMode}
           onHdToggle={onHdToggle}
+          droneId={droneId}
         />
 
         {/* Right Panel - Speedometer & Power */}
@@ -195,7 +169,7 @@ export default function GroundDroneOSD({
 
         {/* Bottom Telemetry Strip */}
         <div className="hud-bottom-strip">
-          <TelemetryStrip telemetry={telemetry} droneType={droneType} />
+          <TelemetryStrip telemetry={telemetry} droneType={droneType} droneId={droneId} />
         </div>
       </div>
     </>

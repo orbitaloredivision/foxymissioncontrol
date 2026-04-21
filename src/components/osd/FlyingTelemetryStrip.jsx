@@ -4,9 +4,10 @@
  * Collapsed: heartbeat left, status right
  * Expanded: telem-content + tlog-console
  */
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DRONE_TYPES, getDisplayFields, formatValueWithUnit } from '../../telemetrySchemas'
+import { useDronePref } from '../../hooks/useDronePref'
 
 // Animated Cardiogram Component (copied from App.jsx TelemetryLog)
 function AnimatedCardiogram({ heartbeats }) {
@@ -95,6 +96,7 @@ function AnimatedCardiogram({ heartbeats }) {
 export function FlyingTelemetryStrip({ 
   telemetry, 
   droneType = DRONE_TYPES.GENERIC_FPV,
+  droneId = null,
   tlogState = { records: [], connectionStatus: 'connecting', heartbeats: [] },
   mapVisible = true,
   osdVisible = true,
@@ -102,7 +104,7 @@ export function FlyingTelemetryStrip({
   onOsdToggle
 }) {
   const { t } = useTranslation()
-  const [isCollapsed, setIsCollapsed] = useState(true)
+  const [isCollapsed, setIsCollapsed] = useDronePref(droneId, 'bottomStripCollapsed', true)
   
   const { records, connectionStatus, heartbeats } = tlogState
   

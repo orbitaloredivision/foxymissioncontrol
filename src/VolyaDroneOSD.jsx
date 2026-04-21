@@ -12,6 +12,7 @@ import {
   VolyaBottomStrip,
   VolyaMiniMap
 } from './components/osd/volya'
+import { RearMirror } from './components/osd'
 
 export default function VolyaDroneOSD({
   telemetry,
@@ -22,11 +23,13 @@ export default function VolyaDroneOSD({
   hdMode,
   onHdToggle,
   mainCameraUrl,
+  rearCameraUrl,
   hasHdStream,
   onShareClick,
   onControlClick,
   directions,
-  directionIndex
+  directionIndex,
+  droneId
 }) {
   return (
     <>
@@ -38,6 +41,15 @@ export default function VolyaDroneOSD({
           isActive={isActive}
           onShareClick={onShareClick}
         />
+
+        {/* Rear-view mirror + heading tape (shared with Foxy, no fuse switches for Volya) */}
+        <div className="hud-mirror-section">
+          <RearMirror
+            rearCameraUrl={rearCameraUrl}
+            heading={telemetry.heading}
+            droneId={droneId}
+          />
+        </div>
 
         <VolyaHudLeftPanel
           heading={telemetry.heading}
@@ -53,6 +65,7 @@ export default function VolyaDroneOSD({
           yaw={telemetry.yaw}
           moving={telemetry.moving}
           reverse={telemetry.reverse}
+          droneId={droneId}
         />
 
         <VolyaHudRightPanel
@@ -67,7 +80,7 @@ export default function VolyaDroneOSD({
           mode={telemetry.mode}
         />
 
-        <VolyaMiniMap telemetry={telemetry} />
+        <VolyaMiniMap telemetry={telemetry} droneId={droneId} />
 
         <VolyaCrosshair />
 
@@ -77,7 +90,7 @@ export default function VolyaDroneOSD({
           onClick={onControlClick}
         />
 
-        <VolyaBottomStrip telemetry={telemetry} droneType={droneType} />
+        <VolyaBottomStrip telemetry={telemetry} droneType={droneType} droneId={droneId} />
       </div>
     </>
   )
