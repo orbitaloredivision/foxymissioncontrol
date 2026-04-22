@@ -187,7 +187,8 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
   const [isSaving, setIsSaving] = useState(false)
   const [scanError, setScanError] = useState(null)
   const [cameras, setCameras] = useState([])
-  const [selectedFront, setSelectedFront] = useState(null)
+  const [selectedFrontSd, setSelectedFrontSd] = useState(null)
+  const [selectedFrontHd, setSelectedFrontHd] = useState(null)
   const [selectedRear, setSelectedRear] = useState(null)
   const [scanLog, setScanLog] = useState(null) // { command, stdout, stderr, status }
   const scanTerminalRef = useRef(null)
@@ -231,7 +232,8 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
     setIsScanning(true)
     setScanError(null)
     setCameras([])
-    setSelectedFront(null)
+    setSelectedFrontSd(null)
+    setSelectedFrontHd(null)
     setSelectedRear(null)
     
     // Set initial scanning log
@@ -273,19 +275,23 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
     }
   }
   
-  const handleAssignFront = (camera) => {
-    // If already selected as rear, unselect it there
-    if (selectedRear?.ip === camera.ip) {
-      setSelectedRear(null)
-    }
-    setSelectedFront(camera)
+  // A single camera can only occupy one slot (SD / HD / Rear). Clear the
+  // other slots if the same camera was previously assigned there.
+  const handleAssignFrontSd = (camera) => {
+    if (selectedFrontHd?.ip === camera.ip) setSelectedFrontHd(null)
+    if (selectedRear?.ip === camera.ip) setSelectedRear(null)
+    setSelectedFrontSd(camera)
   }
-  
+
+  const handleAssignFrontHd = (camera) => {
+    if (selectedFrontSd?.ip === camera.ip) setSelectedFrontSd(null)
+    if (selectedRear?.ip === camera.ip) setSelectedRear(null)
+    setSelectedFrontHd(camera)
+  }
+
   const handleAssignRear = (camera) => {
-    // If already selected as front, unselect it there
-    if (selectedFront?.ip === camera.ip) {
-      setSelectedFront(null)
-    }
+    if (selectedFrontSd?.ip === camera.ip) setSelectedFrontSd(null)
+    if (selectedFrontHd?.ip === camera.ip) setSelectedFrontHd(null)
     setSelectedRear(camera)
   }
   
@@ -420,27 +426,42 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
       return `rtsp://${camera.login}:${camera.password}@${camera.ip}:${camera.rtsp?.port || 554}${camera.rtsp?.path || '/stream0'}`
     }
     
-    // Check if front camera has HD path available
-    const hasHdPath = selectedFront?.rtsp?.path_hd
-    
-    const frontCamera = selectedFront ? {
-      ip: selectedFront.ip,
-      webrtcUrl: generateWebrtcUrl(selectedFront),
-      // HD stream URL for main camera view (only if path_hd available)
-      webrtcUrlHd: hasHdPath ? generateWebrtcUrl(selectedFront, '_hd') : null,
-      snapshotUrl: selectedFront.snapshot?.url || '',
-      rtspUrl: buildRtspUrl(selectedFront),
-      rtspPort: selectedFront.rtsp?.port || 554,
-      rtspPath: selectedFront.rtsp?.path || '/stream0',
-      // HD path for high quality stream (used for main camera view)
-      rtspPathHd: selectedFront.rtsp?.path_hd || null,
-      login: selectedFront.login || '',
-      password: selectedFront.password || '',
-      serialNumber: selectedFront.onvif?.serial_number || '',
-      model: selectedFront.onvif?.model || '',
-      directConnect: selectedFront.directConnect || false
+    // Front SD camera. If no separate HD camera is chosen but the SD camera
+    // exposes a native HD stream path, surface it on the SD object so the
+    // legacy single-camera HD-via-path_hd behaviour still works end-to-end.
+    const hasNativeHdPath = selectedFrontSd?.rtsp?.path_hd && !selectedFrontHd
+
+    const frontCamera = selectedFrontSd ? {
+      ip: selectedFrontSd.ip,
+      webrtcUrl: generateWebrtcUrl(selectedFrontSd),
+      webrtcUrlHd: hasNativeHdPath ? generateWebrtcUrl(selectedFrontSd, '_hd') : null,
+      snapshotUrl: selectedFrontSd.snapshot?.url || '',
+      rtspUrl: buildRtspUrl(selectedFrontSd),
+      rtspPort: selectedFrontSd.rtsp?.port || 554,
+      rtspPath: selectedFrontSd.rtsp?.path || '/stream0',
+      rtspPathHd: hasNativeHdPath ? selectedFrontSd.rtsp.path_hd : null,
+      login: selectedFrontSd.login || '',
+      password: selectedFrontSd.password || '',
+      serialNumber: selectedFrontSd.onvif?.serial_number || '',
+      model: selectedFrontSd.onvif?.model || '',
+      directConnect: selectedFrontSd.directConnect || false
     } : null
-    
+
+    // Front HD camera (separate device). Registered as its own MediaMTX path.
+    const frontCameraHd = selectedFrontHd ? {
+      ip: selectedFrontHd.ip,
+      webrtcUrl: generateWebrtcUrl(selectedFrontHd),
+      snapshotUrl: selectedFrontHd.snapshot?.url || '',
+      rtspUrl: buildRtspUrl(selectedFrontHd),
+      rtspPort: selectedFrontHd.rtsp?.port || 554,
+      rtspPath: selectedFrontHd.rtsp?.path || '/stream0',
+      login: selectedFrontHd.login || '',
+      password: selectedFrontHd.password || '',
+      serialNumber: selectedFrontHd.onvif?.serial_number || '',
+      model: selectedFrontHd.onvif?.model || '',
+      directConnect: selectedFrontHd.directConnect || false
+    } : null
+
     const rearCamera = selectedRear ? {
       ip: selectedRear.ip,
       webrtcUrl: generateWebrtcUrl(selectedRear),
@@ -467,7 +488,7 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
     
     try {
       // Step 1: Save profile
-      await onSave(frontCamera, rearCamera)
+      await onSave(frontCamera, frontCameraHd, rearCamera)
       
       setScanLog(prev => ({
         ...prev,
@@ -478,7 +499,7 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
       const mmtxResponse = await fetch(`${API_BASE_URL}/api/update-mediamtx`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ frontCamera, rearCamera })
+        body: JSON.stringify({ frontCamera, frontCameraHd, rearCamera })
       })
       
       const mmtxData = await mmtxResponse.json()
@@ -511,9 +532,26 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
   }
   
   const getCameraAssignment = (camera) => {
-    if (selectedFront?.ip === camera.ip) return 'front'
+    if (selectedFrontSd?.ip === camera.ip) return 'frontSd'
+    if (selectedFrontHd?.ip === camera.ip) return 'frontHd'
     if (selectedRear?.ip === camera.ip) return 'rear'
     return null
+  }
+
+  // Map assignment slot key -> kebab-case CSS suffix used by camera-card /
+  // assignment-badge variants (e.g. "frontSd" -> "front-sd").
+  const assignmentClassSuffix = {
+    frontSd: 'front-sd',
+    frontHd: 'front-hd',
+    rear: 'rear',
+  }
+
+  // i18n key for the label rendered inside the assignment badge and the
+  // "selected" state of the corresponding assign button.
+  const assignmentLabelKey = {
+    frontSd: 'camera.frontSd',
+    frontHd: 'camera.frontHd',
+    rear: 'camera.rear',
   }
   
   // Check if camera has H.265 codec (NOT supported - block only H.265, allow unknown)
@@ -528,10 +566,11 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
     const assignment = getCameraAssignment(camera)
     const hasH265 = isH265Codec(camera)
     const videoCodec = camera.rtsp?.sdp?.codecs?.[0] || null
+    const assignmentSuffix = assignment ? assignmentClassSuffix[assignment] : null
     return (
       <div 
         key={camera.ip || index} 
-        className={`camera-card ${assignment ? `assigned-${assignment}` : ''} ${hasH265 ? 'codec-unsupported' : ''}`}
+        className={`camera-card ${assignmentSuffix ? `assigned-${assignmentSuffix}` : ''} ${hasH265 ? 'codec-unsupported' : ''}`}
       >
         <div className="camera-snapshot">
           {camera.snapshot?.url ? (
@@ -579,26 +618,33 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
         
         <div className="camera-assignment">
           {assignment && (
-            <div className={`assignment-badge ${assignment}`}>
-              {assignment === 'front' ? t('camera.front') : t('camera.rear')}
+            <div className={`assignment-badge ${assignmentSuffix}`}>
+              {t(assignmentLabelKey[assignment])}
             </div>
           )}
         </div>
-        
+
         <div className="camera-buttons">
           <button
-            className={`assign-btn front ${assignment === 'front' ? 'selected' : ''}`}
-            onClick={() => handleAssignFront(camera)}
+            className={`assign-btn front-sd ${assignment === 'frontSd' ? 'selected' : ''}`}
+            onClick={() => handleAssignFrontSd(camera)}
             disabled={hasH265}
           >
-            {assignment === 'front' ? `✓ ${t('camera.front')}` : t('camera.setAsFront')}
+            {assignment === 'frontSd' ? `✓ ${t('camera.frontSd')}` : t('camera.frontSd')}
+          </button>
+          <button
+            className={`assign-btn front-hd ${assignment === 'frontHd' ? 'selected' : ''}`}
+            onClick={() => handleAssignFrontHd(camera)}
+            disabled={hasH265}
+          >
+            {assignment === 'frontHd' ? `✓ ${t('camera.frontHd')}` : t('camera.frontHd')}
           </button>
           <button
             className={`assign-btn rear ${assignment === 'rear' ? 'selected' : ''}`}
             onClick={() => handleAssignRear(camera)}
             disabled={hasH265}
           >
-            {assignment === 'rear' ? `✓ ${t('camera.rear')}` : t('camera.setAsRear')}
+            {assignment === 'rear' ? `✓ ${t('camera.rear')}` : t('camera.rear')}
           </button>
         </div>
       </div>
@@ -802,7 +848,7 @@ function CameraScannerModal({ droneId, droneIp, onSave, onClose }) {
         <button 
           className="save-btn"
           onClick={handleSaveAssignments}
-          disabled={isSaving || (!selectedFront && !selectedRear)}
+          disabled={isSaving || (!selectedFrontSd && !selectedFrontHd && !selectedRear)}
         >
           {isSaving ? (
             <>
@@ -1786,8 +1832,11 @@ function DroneProfileEditor() {
     }
   }
 
-  // Handle camera settings save from scanner modal
-  const handleSaveCameraSettings = async (frontCamera, rearCamera) => {
+  // Handle camera settings save from scanner modal.
+  // frontCamera is the SD front camera, frontCameraHd is an optional separate
+  // HD front camera (e.g. a different device or the same device's HD stream
+  // exposed as its own MediaMTX path).
+  const handleSaveCameraSettings = async (frontCamera, frontCameraHd, rearCamera) => {
     if (!cameraScannerDrone) return
     
     const { droneId } = cameraScannerDrone
@@ -1799,12 +1848,21 @@ function DroneProfileEditor() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...existingProfile,
-          frontCamera,
-          rearCamera,
+          // Preserve existing camera objects when user didn't pick something
+          // new for that slot in this save.
+          frontCamera: frontCamera || existingProfile.frontCamera || null,
+          frontCameraHd: frontCameraHd || existingProfile.frontCameraHd || null,
+          rearCamera: rearCamera || existingProfile.rearCamera || null,
           // Set WebRTC URL fields (format: /webrtc/cam{serial_number}/whep)
           frontCameraUrl: frontCamera?.webrtcUrl || existingProfile.frontCameraUrl || '',
-          // HD stream URL for main camera view on single drone screen
-          frontCameraUrlHd: frontCamera?.webrtcUrlHd || existingProfile.frontCameraUrlHd || '',
+          // HD stream URL: prefer a separately-picked HD camera; otherwise
+          // fall back to the SD camera's native HD path (webrtcUrlHd) if any,
+          // otherwise keep the previously saved value.
+          frontCameraUrlHd:
+            frontCameraHd?.webrtcUrl
+            || frontCamera?.webrtcUrlHd
+            || existingProfile.frontCameraUrlHd
+            || '',
           rearCameraUrl: rearCamera?.webrtcUrl || existingProfile.rearCameraUrl || ''
         })
       })
@@ -2566,33 +2624,39 @@ function DroneProfileEditor() {
                         <div className="detail-row camera-row">
                           <span className="detail-label">{t('profile.frontCamera')}:</span>
                           <span className="detail-value">
-                            {profile.frontCamera?.ip || profile.frontCameraUrl ? (
-                              <>
-                                <span className="camera-status set">✓ {t('camera.set')}</span>
-                                <button 
-                                  className="set-camera-btn change"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    setCameraScannerDrone({ droneId, droneIp: profile.ipAddress })
-                                  }}
-                                >
-                                  {t('camera.change')}
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <span className="camera-status not-set">{t('camera.notSet')}</span>
-                                <button 
-                                  className="set-camera-btn"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    setCameraScannerDrone({ droneId, droneIp: profile.ipAddress })
-                                  }}
-                                >
-                                  {t('camera.set')}
-                                </button>
-                              </>
-                            )}
+                            {(() => {
+                              const hasSd = !!(profile.frontCamera?.ip || profile.frontCameraUrl)
+                              const hasHd = !!(profile.frontCameraHd?.ip || profile.frontCameraUrlHd)
+                              const hasAny = hasSd || hasHd
+                              return (
+                                <>
+                                  <span className="camera-stream-badges">
+                                    <span
+                                      className={`camera-stream-badge ${hasSd ? 'active' : 'disabled'}`}
+                                      title={hasSd ? t('camera.sdActive', 'SD stream configured') : t('camera.sdInactive', 'SD stream not configured')}
+                                    >
+                                      SD
+                                    </span>
+                                    <span
+                                      className={`camera-stream-badge ${hasHd ? 'active' : 'disabled'}`}
+                                      title={hasHd ? t('camera.hdActive', 'HD stream configured') : t('camera.hdInactive', 'HD stream not configured')}
+                                    >
+                                      HD
+                                    </span>
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className={`set-camera-btn ${hasAny ? 'change' : ''}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setCameraScannerDrone({ droneId, droneIp: profile.ipAddress })
+                                    }}
+                                  >
+                                    {hasAny ? t('camera.change') : t('camera.set')}
+                                  </button>
+                                </>
+                              )
+                            })()}
                           </span>
                         </div>
                         <div className="detail-row camera-row">

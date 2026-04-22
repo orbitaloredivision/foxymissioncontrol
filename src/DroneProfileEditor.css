@@ -1940,9 +1940,14 @@ section h2 {
   border-color: rgba(0, 255, 136, 0.4);
 }
 
-.camera-card.assigned-front {
+.camera-card.assigned-front-sd {
   border-color: #00aaff;
   box-shadow: 0 0 15px rgba(0, 170, 255, 0.2);
+}
+
+.camera-card.assigned-front-hd {
+  border-color: #8c7cff;
+  box-shadow: 0 0 15px rgba(140, 124, 255, 0.25);
 }
 
 .camera-card.assigned-rear {
@@ -2103,10 +2108,16 @@ section h2 {
   letter-spacing: 1px;
 }
 
-.assignment-badge.front {
+.assignment-badge.front-sd {
   background: rgba(0, 170, 255, 0.2);
   color: #00aaff;
   border: 1px solid rgba(0, 170, 255, 0.4);
+}
+
+.assignment-badge.front-hd {
+  background: rgba(140, 124, 255, 0.2);
+  color: #b3a8ff;
+  border: 1px solid rgba(140, 124, 255, 0.4);
 }
 
 .assignment-badge.rear {
@@ -2117,38 +2128,55 @@ section h2 {
 
 .camera-buttons {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.35rem;
   padding: 0.75rem;
   background: rgba(0, 0, 0, 0.3);
 }
 
 .assign-btn {
   flex: 1;
-  padding: 0.5rem;
+  min-width: 0;
+  padding: 0.5rem 0.3rem;
   font-family: inherit;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
   border: 1px solid;
   border-radius: 3px;
   cursor: pointer;
   transition: all 0.2s;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
 }
 
-.assign-btn.front {
+.assign-btn.front-sd {
   background: transparent;
   border-color: #00aaff;
   color: #00aaff;
 }
 
-.assign-btn.front:hover {
+.assign-btn.front-sd:hover {
   background: rgba(0, 170, 255, 0.15);
 }
 
-.assign-btn.front.selected {
+.assign-btn.front-sd.selected {
   background: rgba(0, 170, 255, 0.3);
   box-shadow: 0 0 10px rgba(0, 170, 255, 0.3);
+}
+
+.assign-btn.front-hd {
+  background: transparent;
+  border-color: #8c7cff;
+  color: #b3a8ff;
+}
+
+.assign-btn.front-hd:hover {
+  background: rgba(140, 124, 255, 0.15);
+}
+
+.assign-btn.front-hd.selected {
+  background: rgba(140, 124, 255, 0.3);
+  box-shadow: 0 0 10px rgba(140, 124, 255, 0.35);
 }
 
 .assign-btn.rear {
@@ -2262,6 +2290,39 @@ section h2 {
 .camera-status.not-set {
   color: #666;
   font-style: italic;
+}
+
+/* Front camera SD / HD stream badges on the drone profile card */
+.camera-stream-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-right: 0.5rem;
+}
+
+.camera-stream-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  border: 1px solid;
+  line-height: 1.4;
+  transition: color 0.15s, border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.camera-stream-badge.active {
+  color: var(--hud-primary, #00ff88);
+  border-color: var(--hud-primary, #00ff88);
+  background: rgba(0, 255, 136, 0.12);
+  box-shadow: 0 0 6px rgba(0, 255, 136, 0.25);
+}
+
+.camera-stream-badge.disabled {
+  color: #445;
+  border-color: #2a3a32;
+  background: transparent;
 }
 
 .camera-row {

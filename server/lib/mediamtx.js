@@ -296,7 +296,7 @@ async function manageMediamtxProcess() {
 
 /**
  * Update cameras in paths.yml, rebuild config, and manage mediamtx process
- * @param {Object} profile - Profile with frontCamera and rearCamera
+ * @param {Object} profile - Profile with frontCamera, frontCameraHd and rearCamera
  * @returns {Promise<Object>} Combined result with commands, stdout, stderr
  */
 export async function updateProfileCamerasAsync(profile) {
@@ -307,10 +307,21 @@ export async function updateProfileCamerasAsync(profile) {
     success: true
   };
   
-  // Update front camera (include HD stream if path_hd available)
+  // Front SD camera. If a separate HD camera is explicitly provided we skip
+  // the legacy "includeHd via rtspPathHd" path; HD is then handled by
+  // frontCameraHd below and gets its own MediaMTX path.
   if (profile.frontCamera && profile.frontCamera.serialNumber) {
     output.commands.push(`Updating front camera: cam${profile.frontCamera.serialNumber}`);
-    const result = updateCameraInPaths(profile.frontCamera, profile.frontCamera.serialNumber, { includeHd: true });
+    const includeHd = !profile.frontCameraHd;
+    const result = updateCameraInPaths(profile.frontCamera, profile.frontCamera.serialNumber, { includeHd });
+    output.stdout += result.logs.join('\n') + '\n';
+    if (!result.success) output.success = false;
+  }
+
+  // Front HD camera registered as its own MediaMTX path.
+  if (profile.frontCameraHd && profile.frontCameraHd.serialNumber) {
+    output.commands.push(`Updating front HD camera: cam${profile.frontCameraHd.serialNumber}`);
+    const result = updateCameraInPaths(profile.frontCameraHd, profile.frontCameraHd.serialNumber);
     output.stdout += result.logs.join('\n') + '\n';
     if (!result.success) output.success = false;
   }

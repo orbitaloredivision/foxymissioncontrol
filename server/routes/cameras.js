@@ -63,12 +63,16 @@ router.post('/check-rtsp', async (req, res) => {
 /**
  * POST /api/update-mediamtx
  * Update MediaMTX config for cameras
- * Body: { frontCamera: Object, rearCamera: Object }
+ * Body: { frontCamera: Object, frontCameraHd: Object, rearCamera: Object }
+ *   - frontCamera: SD front camera (main view on drone screen)
+ *   - frontCameraHd: optional separate HD front camera, registered as its
+ *     own MediaMTX path (cam{serial}) distinct from the SD one
+ *   - rearCamera: rear view camera
  */
 router.post('/update-mediamtx', async (req, res) => {
-  const { frontCamera, rearCamera } = req.body;
+  const { frontCamera, frontCameraHd, rearCamera } = req.body;
   
-  if (!frontCamera && !rearCamera) {
+  if (!frontCamera && !frontCameraHd && !rearCamera) {
     return res.status(400).json({ 
       success: false, 
       error: 'At least one camera is required',
@@ -78,7 +82,7 @@ router.post('/update-mediamtx', async (req, res) => {
   }
   
   try {
-    const profile = { frontCamera, rearCamera };
+    const profile = { frontCamera, frontCameraHd, rearCamera };
     const result = await updateProfileCamerasAsync(profile);
     
     res.json({
