@@ -4,6 +4,7 @@ import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api'
 import { useTranslation } from 'react-i18next'
 import config from './config'
 import { DRONE_TYPES, DRONE_TYPE_LABEL_KEYS } from './telemetrySchemas'
+import { formatAppVersion, useAppVersion } from './hooks/useAppVersion'
 import './DroneProfileEditor.css'
 import './Dashboard.css'
 
@@ -1364,6 +1365,7 @@ import { isAuthenticated as checkAuthCookie, setAuthCookie, clearAuthCookie } fr
 
 function DroneProfileEditor() {
   const { t } = useTranslation()
+  const { versionLabel } = useAppVersion()
   const navigate = useNavigate()
   
   // Authentication state - default to false, check cookie on mount
@@ -3288,7 +3290,7 @@ function DroneProfileEditor() {
             {upgradeLog?.status === 'success' && (
               <div className="upgrade-notification success">
                 <span className="icon">✓</span>
-                <span>{t('settings.upgradeSuccess', { version: upgradeVersion || t('osd.version') })}</span>
+                <span>{t('settings.upgradeSuccess', { version: formatAppVersion(upgradeVersion) || versionLabel || '—' })}</span>
               </div>
             )}
             {upgradeLog?.status === 'error' && (
