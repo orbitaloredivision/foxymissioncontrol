@@ -196,6 +196,126 @@ print_installed() {
     echo -e "  ${GREEN}[OK]${NC} $1 ${DIM}(already installed)${NC}"
 }
 
+# Sub-step label inside a main installer step (e.g. 5a, 5b).
+print_substep() {
+    local id="$1"
+    local name="$2"
+    stop_spinner
+    if [ "$PLAIN_MODE" = true ]; then
+        echo ""
+        echo "  [$id] $name"
+        return
+    fi
+    echo ""
+    echo -e "  ${CYAN}[$id]${NC} ${WHITE}${name}${NC}"
+}
+
+format_duration() {
+    local secs=$1
+    local m=$((secs / 60))
+    local s=$((secs % 60))
+    if [ "$m" -gt 0 ]; then
+        echo "${m}m ${s}s"
+    else
+        echo "${s}s"
+    fi
+}
+
+# Warn before backend npm install — better-sqlite3 often compiles silently on ARM.
+print_npm_native_compile_notice() {
+    print_warning "Installing backend npm packages (includes better-sqlite3 native module)"
+    print_detail "On ARM Orange Pi, better-sqlite3 may compile from source on first install."
+    print_detail "This can take 10-20 minutes with little or no npm output — that is normal."
+    print_detail "A progress heartbeat will print every 30s while npm is still running."
+}
+
+# Run npm install with live log tailing and periodic heartbeat so long native
+# builds do not look stuck. Writes to $2 directory as user orangepi.
+run_npm_install_with_heartbeat() {
+    local workdir="$1"
+    local log_label="${2:-npm install}"
+    local logfile="/tmp/guidashboard-npm-$$.log"
+    local npm_exit=0
+    local npm_pid
+    local start_ts last_heartbeat_ts elapsed
+    local printed_lines new_lines line elapsed_fmt
+
+    : > "$logfile"
+    printed_lines=0
+    start_ts=$(date +%s)
+    last_heartbeat_ts=$start_ts
+
+    if [ "$PLAIN_MODE" = true ]; then
+        echo "  > Running $log_label..."
+        echo "    +----------------------------------------------------------"
+    else
+        echo -e "  ${CYAN}>${NC} Running ${log_label}..."
+        echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+    fi
+
+    (
+        cd "$workdir" || exit 1
+        sudo -u orangepi npm install
+    ) > "$logfile" 2>&1 &
+    npm_pid=$!
+
+    while kill -0 "$npm_pid" 2>/dev/null; do
+        sleep 2
+        new_lines=$(wc -l < "$logfile" 2>/dev/null | tr -d ' ')
+        if [ "${new_lines:-0}" -gt "$printed_lines" ]; then
+            tail -n +"$((printed_lines + 1))" "$logfile" | while IFS= read -r line; do
+                if [ "$PLAIN_MODE" = true ]; then
+                    echo "    | $line"
+                else
+                    echo -e "    ${GRAY}|${NC} $line"
+                fi
+            done
+            printed_lines=$new_lines
+        fi
+
+        elapsed=$(( $(date +%s) - start_ts ))
+        if [ $(($(date +%s) - last_heartbeat_ts)) -ge 30 ]; then
+            elapsed_fmt=$(format_duration "$elapsed")
+            if [ "$PLAIN_MODE" = true ]; then
+                echo "    | [..] still running ($elapsed_fmt elapsed) — native compile may be silent"
+            else
+                echo -e "    ${GRAY}|${NC} ${YELLOW}[..]${NC} still running (${elapsed_fmt} elapsed) — native compile may be silent"
+            fi
+            last_heartbeat_ts=$(date +%s)
+        fi
+    done
+
+    wait "$npm_pid"
+    npm_exit=$?
+
+    new_lines=$(wc -l < "$logfile" 2>/dev/null | tr -d ' ')
+    if [ "${new_lines:-0}" -gt "$printed_lines" ]; then
+        tail -n +"$((printed_lines + 1))" "$logfile" | while IFS= read -r line; do
+            if [ "$PLAIN_MODE" = true ]; then
+                echo "    | $line"
+            else
+                echo -e "    ${GRAY}|${NC} $line"
+            fi
+        done
+    fi
+
+    elapsed=$(( $(date +%s) - start_ts ))
+    if [ "$PLAIN_MODE" = true ]; then
+        echo "    +----------------------------------------------------------"
+        echo "  [OK] $log_label finished in $(format_duration "$elapsed") (exit $npm_exit)"
+    else
+        echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
+        if [ "$npm_exit" -eq 0 ]; then
+            print_success "$log_label finished in $(format_duration "$elapsed")"
+        else
+            print_warning "$log_label finished in $(format_duration "$elapsed") (exit code: $npm_exit)"
+        fi
+    fi
+
+    rm -f "$logfile"
+    return $npm_exit
+}
+
 # Run command with live output in a box
 run_boxed() {
     local cmd="$1"
@@ -737,14 +857,18 @@ clone_repository() {
 }
 
 setup_backend() {
+    local profiles_backup saved_profiles drone_count npm_exit
+
     print_step 5 "Setting Up Backend Server"
+
+    print_substep "5a" "Validate and prepare server directory"
     
     # Detect placeholder/empty server files from a broken previous deployment
     # If index.js exists but is 0 bytes, the entire directory is stubs
     if [ -f "$SERVER_DIR/index.js" ] && [ ! -s "$SERVER_DIR/index.js" ]; then
         print_warning "Server files are empty (broken previous deploy) - cleaning up..."
         # Preserve drone-profiles.json content if non-empty before wiping
-        local saved_profiles=""
+        saved_profiles=""
         if [ -s "$SERVER_DIR/drone-profiles.json" ]; then
             saved_profiles=$(cat "$SERVER_DIR/drone-profiles.json")
         fi
@@ -757,12 +881,14 @@ setup_backend() {
     fi
     
     # Backup existing drone-profiles.json before copying (to preserve paired drones)
-    local profiles_backup=""
+    profiles_backup=""
     if [ -s "$SERVER_DIR/drone-profiles.json" ]; then
         profiles_backup=$(cat "$SERVER_DIR/drone-profiles.json")
         print_info "Backing up existing drone profiles..."
     fi
     
+    print_substep "5b" "Copy server files to $SERVER_DIR"
+
     # Copy server files
     if [ -d "$REPO_DIR/server" ]; then
         start_spinner "Copying server files to $SERVER_DIR"
@@ -786,6 +912,8 @@ setup_backend() {
         fail "package.json not found in $SERVER_DIR"
     fi
     print_success "package.json found"
+
+    print_substep "5c" "Prepare drone-profiles.json"
     
     # Restore or create drone-profiles.json (drones must be an array)
     # The ONLY profiles file is at $SERVER_DIR/drone-profiles.json
@@ -810,7 +938,7 @@ setup_backend() {
         # Check format of the file copied from repo
         if grep -q '"drones"\s*:\s*\[' "$SERVER_DIR/drone-profiles.json" 2>/dev/null; then
             # It's the example file from repo - create empty array instead
-            local drone_count=$(grep -c '"droneId"' "$SERVER_DIR/drone-profiles.json" 2>/dev/null || echo "0")
+            drone_count=$(grep -c '"droneId"' "$SERVER_DIR/drone-profiles.json" 2>/dev/null || echo "0")
             if [ "$drone_count" -gt 0 ]; then
                 print_installed "drone-profiles.json (from repo, $drone_count drones)"
             else
@@ -830,28 +958,33 @@ setup_backend() {
         print_success "Created drone-profiles.json (array format)"
     fi
     
-    # Install npm dependencies with live output
+    print_substep "5d" "Install backend npm dependencies"
     echo ""
-    echo -e "  ${CYAN}>${NC} Running npm install..."
-    echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
-    
-    cd "$SERVER_DIR"
-    local npm_exit=0
-    
-    # Run npm install with live output
-    sudo -u orangepi npm install 2>&1 | while IFS= read -r line; do
-        echo -e "    ${GRAY}|${NC} $line"
-    done
-    npm_exit=${PIPESTATUS[0]}
-    
-    echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
-    
+    print_npm_native_compile_notice
+    echo ""
+
+    npm_exit=0
+    run_npm_install_with_heartbeat "$SERVER_DIR" "backend npm install" || npm_exit=$?
+
+    print_substep "5e" "Verify backend node_modules"
+
     if [ $npm_exit -eq 0 ]; then
-        print_success "Dependencies installed"
+        if [ -d "$SERVER_DIR/node_modules/better-sqlite3" ]; then
+            print_success "better-sqlite3 installed"
+        fi
+        if [ -d "$SERVER_DIR/node_modules/express" ]; then
+            print_success "express installed"
+        fi
+        print_success "Backend dependencies ready"
     else
         # Check if node_modules was created anyway (sometimes npm reports errors but works)
         if [ -d "$SERVER_DIR/node_modules" ] && [ -d "$SERVER_DIR/node_modules/express" ]; then
             print_warning "npm reported warnings but dependencies appear installed"
+            if [ -d "$SERVER_DIR/node_modules/better-sqlite3" ]; then
+                print_success "better-sqlite3 present in node_modules"
+            else
+                print_warning "better-sqlite3 missing — database features may not work"
+            fi
         else
             fail "Failed to install npm dependencies (exit code: $npm_exit)"
         fi
