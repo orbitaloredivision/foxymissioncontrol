@@ -11,6 +11,7 @@ import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { config } from '../config.js';
+import { restartMediamtxManaged } from '../lib/mediamtx.js';
 
 const execAsync = promisify(exec);
 const router = express.Router();
@@ -221,37 +222,13 @@ router.get('/mediamtx/logs', async (req, res) => {
  */
 router.post('/mediamtx/restart', async (req, res) => {
   try {
-    // Kill existing process
-    try {
-      const { stdout } = await execAsync(`pidof ${mediamtxBinary} 2>/dev/null || echo ""`);
-      const pid = stdout.trim();
-      if (pid) {
-        await execAsync(`kill ${pid}`);
-        await new Promise(r => setTimeout(r, 1000));
-      }
-    } catch {
-      // Process wasn't running
-    }
-    
-    // Start new process
-    await execAsync(
-      `cd ${config.mediamtxPath} && setsid ./mediamtx > ${mediamtxLog} 2>&1 &`,
-      { shell: '/bin/bash' }
-    );
-    
-    await new Promise(r => setTimeout(r, 2000));
-    
-    // Verify it started
-    const { stdout: verifyOut } = await execAsync(
-      `pidof ${mediamtxBinary} 2>/dev/null || echo ""`
-    );
-    
-    const newPid = verifyOut.trim();
-    
+    const result = await restartMediamtxManaged();
     res.json({
-      success: !!newPid,
-      pid: newPid || null,
-      message: newPid ? 'MediaMTX restarted successfully' : 'Failed to start MediaMTX'
+      success: result.success && !!result.pid,
+      pid: result.pid || null,
+      stdout: result.stdout,
+      stderr: result.stderr,
+      message: result.pid ? 'MediaMTX restarted successfully' : 'Failed to start MediaMTX'
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

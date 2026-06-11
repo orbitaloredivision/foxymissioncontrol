@@ -118,11 +118,15 @@ export function updateCameraInPaths(camera, serialNumber, options = {}) {
     const rtspUrlMasked = `rtsp://${login}:***@${camera.ip}:${rtspPort}${rtspPath}`;
     
     const isNew = !paths[pathName];
-    paths[pathName] = {
+    // Remote / direct-connect cameras often need more time to answer RTSP
+    // than local LAN cameras. Default MediaMTX start timeout is 10s.
+    const pathConfig = {
       source: rtspUrl,
       sourceOnDemand: 'yes',
-      sourceProtocol: 'tcp'
+      sourceProtocol: 'tcp',
+      sourceOnDemandStartTimeout: '30s',
     };
+    paths[pathName] = pathConfig;
     
     logs.push(`[${isNew ? 'ADD' : 'UPDATE'}] ${pathName}: ${rtspUrlMasked}`);
     
@@ -136,7 +140,8 @@ export function updateCameraInPaths(camera, serialNumber, options = {}) {
       paths[pathNameHd] = {
         source: rtspUrlHd,
         sourceOnDemand: 'yes',
-        sourceProtocol: 'tcp'
+        sourceProtocol: 'tcp',
+        sourceOnDemandStartTimeout: '30s',
       };
       
       logs.push(`[${isNewHd ? 'ADD' : 'UPDATE'}] ${pathNameHd}: ${rtspUrlHdMasked} (HD)`);
@@ -181,6 +186,89 @@ async function rebuildConfig() {
     result.success = false;
   }
   
+  return result;
+}
+
+/**
+ * Stop every MediaMTX instance (systemd + orphan manual processes).
+ * @returns {Promise<Object>}
+ */
+async function stopAllMediamtx() {
+  const result = { stdout: '', stderr: '', success: true };
+  try {
+    const { stdout: pidsOut } = await execAsync(
+      `pidof ${mediamtxBinary} 2>/dev/null || echo ""`,
+      { timeout: 5000 }
+    );
+    const pids = pidsOut.trim();
+    if (pids) {
+      result.stdout += `[STOP] Killing MediaMTX PIDs: ${pids}\n`;
+      await execAsync(`kill ${pids}`, { timeout: 5000 });
+      await new Promise(r => setTimeout(r, 1000));
+    }
+  } catch (error) {
+    result.stderr += `[WARNING] Stop failed: ${error.message}\n`;
+  }
+  return result;
+}
+
+/**
+ * Restart MediaMTX via systemd when available, otherwise a single manual process.
+ * Avoids duplicate instances (systemd + setsid fighting for UDP ports).
+ * @returns {Promise<Object>}
+ */
+export async function restartMediamtxManaged() {
+  const result = { stdout: '', stderr: '', success: true, pid: null };
+
+  const stopResult = await stopAllMediamtx();
+  result.stdout += stopResult.stdout;
+  result.stderr += stopResult.stderr;
+
+  const serviceFile = '/etc/systemd/system/mediamtx.service';
+  if (fs.existsSync(serviceFile)) {
+    result.stdout += '[START] Restarting MediaMTX via systemd...\n';
+    try {
+      await execAsync('systemctl restart mediamtx 2>/dev/null || sudo systemctl restart mediamtx', {
+        timeout: 15000,
+        shell: '/bin/bash',
+      });
+      await new Promise(r => setTimeout(r, 2000));
+      const { stdout: verifyOut } = await execAsync(
+        `pidof ${mediamtxBinary} 2>/dev/null || echo ""`,
+        { timeout: 5000 }
+      );
+      const pidList = verifyOut.trim().split(/\s+/).filter(Boolean);
+      if (pidList.length === 1) {
+        result.pid = pidList[0];
+        result.stdout += `[SUCCESS] MediaMTX running via systemd (PID: ${result.pid})\n`;
+        return result;
+      }
+      if (pidList.length > 1) {
+        result.stderr += `[WARNING] Multiple MediaMTX PIDs after systemd restart: ${pidList.join(' ')}\n`;
+        await execAsync(`kill ${pidList.join(' ')}`, { timeout: 5000 });
+        await execAsync('systemctl restart mediamtx 2>/dev/null || sudo systemctl restart mediamtx', {
+          timeout: 15000,
+          shell: '/bin/bash',
+        });
+        await new Promise(r => setTimeout(r, 2000));
+      }
+    } catch (error) {
+      result.stderr += `[WARNING] systemd restart failed: ${error.message}\n`;
+    }
+  }
+
+  result.stdout += '[START] Starting MediaMTX manually...\n';
+  const startResult = await startMediamtx();
+  result.stdout += startResult.stdout;
+  result.stderr += startResult.stderr;
+  result.success = startResult.success;
+  if (startResult.success) {
+    const { stdout: verifyOut } = await execAsync(
+      `pidof ${mediamtxBinary} 2>/dev/null || echo ""`,
+      { timeout: 5000 }
+    );
+    result.pid = verifyOut.trim().split(/\s+/)[0] || null;
+  }
   return result;
 }
 
@@ -244,47 +332,43 @@ async function manageMediamtxProcess() {
   result.stdout += '[MMTX] Checking MediaMTX status...\n';
   
   try {
-    // Check if mediamtx is running (use pidof for exact binary match)
     const { stdout: psOut } = await execAsync(
       `pidof ${mediamtxBinary} 2>/dev/null || echo ""`,
       { timeout: 5000 }
     );
-    const mediamtxPid = psOut.trim().split(' ')[0];
+    const pidList = psOut.trim().split(/\s+/).filter(Boolean);
+
+    if (pidList.length > 1) {
+      result.stderr += `[WARNING] Multiple MediaMTX instances (${pidList.join(', ')}), restarting cleanly...\n`;
+      const restartResult = await restartMediamtxManaged();
+      result.stdout += restartResult.stdout;
+      result.stderr += restartResult.stderr;
+      if (!restartResult.success) result.success = false;
+      return result;
+    }
+
+    const mediamtxPid = pidList[0];
     
     if (mediamtxPid) {
       result.stdout += `[STATUS] MediaMTX running (PID: ${mediamtxPid})\n`;
-      
-      // Send SIGHUP to reload config without restart
       result.stdout += '[RELOAD] Sending SIGHUP to reload config...\n';
       try {
         await execAsync(`kill -HUP ${mediamtxPid}`, { timeout: 5000 });
         result.stdout += '[SUCCESS] Config reload signal sent\n';
       } catch (reloadErr) {
         result.stderr += `[WARNING] Could not reload: ${reloadErr.message}\n`;
-        
-        // Try restart instead
         result.stdout += '[RESTART] Attempting full restart...\n';
-        try {
-          await execAsync(`kill ${mediamtxPid}`, { timeout: 5000 });
-          await new Promise(r => setTimeout(r, 1000));
-          
-          const startResult = await startMediamtx();
-          result.stdout += startResult.stdout;
-          result.stderr += startResult.stderr;
-          if (!startResult.success) result.success = false;
-        } catch (restartErr) {
-          result.stderr += `[ERROR] Restart failed: ${restartErr.message}\n`;
-          result.success = false;
-        }
+        const restartResult = await restartMediamtxManaged();
+        result.stdout += restartResult.stdout;
+        result.stderr += restartResult.stderr;
+        if (!restartResult.success) result.success = false;
       }
     } else {
       result.stdout += '[STATUS] MediaMTX not running\n';
-      result.stdout += '[START] Starting MediaMTX...\n';
-      
-      const startResult = await startMediamtx();
-      result.stdout += startResult.stdout;
-      result.stderr += startResult.stderr;
-      if (!startResult.success) result.success = false;
+      const restartResult = await restartMediamtxManaged();
+      result.stdout += restartResult.stdout;
+      result.stderr += restartResult.stderr;
+      if (!restartResult.success) result.success = false;
     }
   } catch (error) {
     result.stderr += `[ERROR] Status check failed: ${error.message}\n`;

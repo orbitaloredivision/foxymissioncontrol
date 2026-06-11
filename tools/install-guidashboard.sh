@@ -1218,20 +1218,18 @@ EOF
     systemctl daemon-reload
     systemctl enable mediamtx > /dev/null 2>&1
     
-    # Start/restart MediaMTX
+    # Start/restart MediaMTX (kill orphans from manual/setsid starts first)
+    start_spinner "Restarting MediaMTX service"
+    killall mediamtx 2>/dev/null || true
+    sleep 1
     if systemctl is-active --quiet mediamtx; then
-        start_spinner "Restarting MediaMTX service"
         systemctl restart mediamtx
-        sleep 2
-        stop_spinner
-        print_success "MediaMTX restarted"
     else
-        start_spinner "Starting MediaMTX service"
         systemctl start mediamtx
-        sleep 2
-        stop_spinner
-        print_success "MediaMTX started"
     fi
+    sleep 2
+    stop_spinner
+    print_success "MediaMTX restarted"
     
     print_detail "Ports: RTSP=8554, HLS=8888, WebRTC=8889, API=9997"
 }
