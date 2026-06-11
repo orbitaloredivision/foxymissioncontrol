@@ -14,6 +14,7 @@ import GroundDroneOSD from './GroundDroneOSD'
 import FlyingDroneOSD from './FlyingDroneOSD'
 import VolyaDroneOSD from './VolyaDroneOSD'
 import { useDronePref } from './hooks/useDronePref'
+import { getMainCameraUrl, resolveFrontCameraUrls } from './utils/cameraUrls'
 
 // API Configuration from config
 const API_BASE_URL = config.apiUrl
@@ -397,17 +398,13 @@ function App() {
   ]
   const directionIndex = Math.round(telemetry.heading / 45) % 8
 
-  // Get camera URLs from profile or use defaults
-  const frontCameraUrl = droneProfile?.frontCameraUrl || '/webrtc/cam1/whep'
-  // HD stream URL for main camera view (if available)
-  const frontCameraUrlHd = droneProfile?.frontCameraUrlHd || null
-  const hasHdStream = !!frontCameraUrlHd
+  const { frontCameraUrlSd: frontCameraUrl, frontCameraUrlHd, hasHdStream } =
+    resolveFrontCameraUrls(droneProfile)
   const rearCameraUrl = droneProfile?.rearCameraUrl || '/webrtc/cam2/whep'
   // Drone number is array index + 1
   const droneNumber = (droneProfile?._index ?? 0) + 1
   const droneName = droneProfile?.name || `Drone #${droneNumber}`
-  // Determine which stream to use for main camera
-  const mainCameraUrl = (hdMode && hasHdStream) ? frontCameraUrlHd : frontCameraUrl
+  const mainCameraUrl = getMainCameraUrl(droneProfile, hdMode)
 
   // Get drone type from profile
   const droneType = droneProfile?.droneType || DRONE_TYPES.FOXY

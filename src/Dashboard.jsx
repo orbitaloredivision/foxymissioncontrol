@@ -13,6 +13,8 @@ import {
   createInitialState as createTelemetryState,
   getBatteryStatus
 } from './telemetrySchemas'
+import { getPreviewCameraUrl } from './utils/cameraUrls'
+import { useAppVersion } from './hooks/useAppVersion'
 import './Dashboard.css'
 
 const API_BASE_URL = config.apiUrl
@@ -182,8 +184,7 @@ function DroneCard({
 }) {
   const { t } = useTranslation()
   const isOnline = telemetry?.connected
-  // Use front camera for dashboard preview
-  const previewCameraUrl = profile?.frontCameraUrl
+  const previewCameraUrl = getPreviewCameraUrl(profile)
   // Display name if available, otherwise fall back to generic label (no IP in title)
   const displayName = profile?.name || ''
   
@@ -301,6 +302,7 @@ function EmptySlot({ slotNumber }) {
 
 function Dashboard() {
   const { t } = useTranslation()
+  const { versionLabel } = useAppVersion()
   const navigate = useNavigate()
   const [profiles, setProfiles] = useState({})
   const [droneIds, setDroneIds] = useState([])
@@ -693,7 +695,7 @@ function Dashboard() {
       </main>
       
       <footer className="dashboard-footer">
-        <span className="footer-version">{t('osd.version')}</span>
+        {versionLabel && <span className="footer-version">{versionLabel}</span>}
         <span className="footer-text">
           {t('dashboard.dronesCount', { count: connectedDroneIds.length })} • 
           {t('dashboard.onlineCount', { count: Object.values(droneTelemetry).filter(tel => tel?.connected).length })}
