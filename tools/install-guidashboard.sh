@@ -31,9 +31,9 @@ SKIP_CONFIRM=false
 # =============================================================================
 
 REPO_URL="https://github.com/orbitaloredivision/foxymissioncontrol.git"
-MEDIAMTX_VERSION="v1.9.3"
-MEDIAMTX_VERSION_NUM="1.9.3"
-MEDIAMTX_ARCH="linux_arm64v8"
+MEDIAMTX_VERSION="v1.15.1"
+MEDIAMTX_VERSION_NUM="1.15.1"
+MEDIAMTX_ARCH="linux_arm64"
 MIN_NODE_VERSION=20
 
 # Directories
