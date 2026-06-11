@@ -7,6 +7,7 @@ function CameraFeed({ streamUrl, variant = "main" }) {
   const { t } = useTranslation()
   const videoRef = useRef(null)
   const pcRef = useRef(null)
+  const sessionUrlRef = useRef(null)
   const retryTimeoutRef = useRef(null)
   const [status, setStatus] = useState('connecting')
   const [hasFrames, setHasFrames] = useState(false) // Track if video actually has visible frames
@@ -56,6 +57,12 @@ function CameraFeed({ streamUrl, variant = "main" }) {
       }, delay)
     }
 
+    // Extract ice-ufrag / ice-pwd from an SDP for trickle PATCH fragments.
+    const readIceCreds = (sdp) => ({
+      ufrag: (sdp.match(/a=ice-ufrag:(\S+)/) || [])[1] || '',
+      pwd: (sdp.match(/a=ice-pwd:(\S+)/) || [])[1] || '',
+    })
+
     const startWebRTC = async () => {
       try {
         const pc = new RTCPeerConnection({
@@ -86,25 +93,12 @@ function CameraFeed({ streamUrl, variant = "main" }) {
 
         const offer = await pc.createOffer()
         await pc.setLocalDescription(offer)
+        const localCreds = readIceCreds(offer.sdp)
 
-        // Wait for ICE gathering to complete
-        await new Promise((resolve) => {
-          if (pc.iceGatheringState === 'complete') {
-            resolve()
-          } else {
-            const checkState = () => {
-              if (pc.iceGatheringState === 'complete') {
-                pc.removeEventListener('icegatheringstatechange', checkState)
-                resolve()
-              }
-            }
-            pc.addEventListener('icegatheringstatechange', checkState)
-            // Timeout fallback
-            setTimeout(resolve, 2000)
-          }
-        })
-
-        // Send offer to MediaMTX WHEP endpoint
+        // POST the offer immediately (do not wait for ICE gathering). MediaMTX
+        // is ice-lite and needs our candidates delivered via trickle PATCH to
+        // the session URL from the Location header. Waiting for gathering and
+        // posting a single non-trickle offer fails to form a candidate pair.
         const response = await fetch(streamUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/sdp' },
@@ -113,8 +107,36 @@ function CameraFeed({ streamUrl, variant = "main" }) {
 
         if (!response.ok) throw new Error('WHEP request failed')
 
+        // Resolve the session resource URL for trickle ICE / teardown.
+        const location = response.headers.get('Location') || ''
+        let sessionUrl = null
+        if (location) {
+          try {
+            sessionUrl = new URL(location, streamUrl).href
+          } catch {
+            sessionUrl = location
+          }
+        }
+        sessionUrlRef.current = sessionUrl
+
         const answerSdp = await response.text()
         await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp })
+
+        // Trickle our ICE candidates to MediaMTX as they are discovered.
+        pc.onicecandidate = (event) => {
+          if (!event.candidate || !sessionUrl) return
+          const frag =
+            `a=ice-ufrag:${localCreds.ufrag}\r\n` +
+            `a=ice-pwd:${localCreds.pwd}\r\n` +
+            `m=video 9 UDP/TLS/RTP/SAVPF 0\r\n` +
+            `a=mid:${event.candidate.sdpMid ?? '0'}\r\n` +
+            `a=${event.candidate.candidate}\r\n`
+          fetch(sessionUrl, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/trickle-ice-sdpfrag' },
+            body: frag
+          }).catch(() => {})
+        }
 
       } catch (error) {
         console.error('WebRTC error:', error)
@@ -135,6 +157,11 @@ function CameraFeed({ streamUrl, variant = "main" }) {
       if (pcRef.current) {
         pcRef.current.close()
         pcRef.current = null
+      }
+      // Release the MediaMTX WHEP reader session so it doesn't linger.
+      if (sessionUrlRef.current) {
+        fetch(sessionUrlRef.current, { method: 'DELETE' }).catch(() => {})
+        sessionUrlRef.current = null
       }
     }
   }, [streamUrl, retryKey])
