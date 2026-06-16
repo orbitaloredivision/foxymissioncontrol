@@ -2095,6 +2095,10 @@ body {
 }
 
 /* ========== FPV MINIMAP (square resizable panel mode) ========== */
+.flying-drone-osd .fpv-minimap {
+  z-index: 25;
+}
+
 .flying-drone-osd .fpv-minimap .map-panel {
   width: 480px;
 }
@@ -2675,6 +2679,34 @@ body {
 .flying-osd-switch.off .switch-indicator {
   background: #444;
   box-shadow: none;
+}
+
+/* MAP button indicator shapes per display mode */
+.flying-osd-switch.map-mode-hidden .switch-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1.5px solid #555;
+  box-shadow: none;
+}
+
+.flying-osd-switch.map-mode-blot .switch-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 58% 42% 62% 38% / 42% 58% 38% 62%;
+  background: var(--theme-accent-primary, #00ff88);
+  border: none;
+  box-shadow: 0 0 6px var(--theme-accent-primary, #00ff88);
+}
+
+.flying-osd-switch.map-mode-panel .switch-indicator {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--theme-accent-primary, #00ff88);
+  border: none;
+  box-shadow: 0 0 6px var(--theme-accent-primary, #00ff88);
 }
 
 .flying-osd-switch:hover {
