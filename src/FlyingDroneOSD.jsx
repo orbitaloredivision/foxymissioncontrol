@@ -2,23 +2,26 @@
  * Flying Drone OSD (Generic FPV)
  * OSD layout for FPV quadcopters
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import CameraFeed from './components/CameraFeed'
 import {
   HudTopBar,
   HudLeftPanel,
   FlyingTelemetryStrip,
-  MapPanel,
   MapBlot,
+  ResizableMapPanel,
   ControlIcon,
   AirspeedTape,
   AltitudeTape,
   ArtificialHorizon,
   SlipSkidIndicator,
-  HeadingCompassArc
+  HeadingCompassArc,
+  cycleFpvMapMode,
+  isFpvMapVisible,
 } from './components/osd'
 import { useDronePref } from './hooks/useDronePref'
+import { getDronePref } from './utils/dronePrefs'
 
 /**
  * Flying Drone OSD Component
@@ -43,10 +46,28 @@ export default function FlyingDroneOSD({
 }) {
   const { t } = useTranslation()
 
-  // Map visibility persists per drone in cookies; osdVisible stays session-local.
-  const [mapVisible, setMapVisible] = useDronePref(droneId, 'mapVisible', true)
+  const [mapMode, setMapMode] = useDronePref(droneId, 'mapMode', 'blot')
   const [osdVisible, setOsdVisible] = useState(true)
-  
+
+  // Migrate legacy boolean mapVisible cookie to mapMode.
+  useEffect(() => {
+    if (!droneId) return
+    const savedMode = getDronePref(droneId, 'mapMode', null)
+    if (savedMode !== null) return
+    const legacyVisible = getDronePref(droneId, 'mapVisible', null)
+    if (legacyVisible !== null) {
+      setMapMode(legacyVisible ? 'blot' : 'hidden')
+    }
+  }, [droneId, setMapMode])
+
+  const cycleMapMode = () => setMapMode((current) => cycleFpvMapMode(current))
+
+  const mapModeTitle = {
+    hidden: t('osd.mapModeHidden', 'Map off — click for masked map'),
+    blot: t('osd.mapModeBlot', 'Masked map — click for square map'),
+    panel: t('osd.mapModePanel', 'Square map — click to hide map'),
+  }[mapMode] || ''
+
   return (
     <>
       {/* Full-screen Front Camera Background */}
@@ -110,8 +131,8 @@ export default function FlyingDroneOSD({
           />
         </div>
         
-        {/* Map Blot - organic masked map at bottom-right, slides in/out */}
-        <div className={`map-blot-wrapper ${mapVisible ? 'visible' : 'hidden'}`}>
+        {/* Masked organic map (MapBlot) */}
+        <div className={`map-blot-wrapper ${mapMode === 'blot' ? 'visible' : 'hidden'}`}>
           <MapBlot 
             pathHistory={telemetry.pathHistory} 
             heading={telemetry.heading}
@@ -119,6 +140,16 @@ export default function FlyingDroneOSD({
             lng={telemetry.longitude}
           />
         </div>
+
+        {/* Square resizable map (same as Volya / Foxy ground) */}
+        {mapMode === 'panel' && (
+          <ResizableMapPanel
+            telemetry={telemetry}
+            droneId={droneId}
+            onClose={() => setMapMode('hidden')}
+            className="fpv-minimap"
+          />
+        )}
         
         {/* Bottom Telemetry Strip - FPV version with integrated telemetry log */}
         <div className="hud-bottom-strip">
@@ -127,9 +158,11 @@ export default function FlyingDroneOSD({
             droneType={droneType} 
             droneId={droneId}
             tlogState={tlogState}
-            mapVisible={mapVisible}
+            mapMode={mapMode}
+            mapVisible={isFpvMapVisible(mapMode)}
             osdVisible={osdVisible}
-            onMapToggle={() => setMapVisible(!mapVisible)}
+            onMapCycle={cycleMapMode}
+            mapModeTitle={mapModeTitle}
             onOsdToggle={() => setOsdVisible(!osdVisible)}
           />
         </div>

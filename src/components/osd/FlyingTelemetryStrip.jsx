@@ -98,9 +98,11 @@ export function FlyingTelemetryStrip({
   droneType = DRONE_TYPES.GENERIC_FPV,
   droneId = null,
   tlogState = { records: [], connectionStatus: 'connecting', heartbeats: [] },
+  mapMode = 'blot',
   mapVisible = true,
   osdVisible = true,
-  onMapToggle,
+  onMapCycle,
+  mapModeTitle = '',
   onOsdToggle
 }) {
   const { t } = useTranslation()
@@ -207,8 +209,10 @@ export function FlyingTelemetryStrip({
               <span className="switch-indicator"></span>
             </button>
             <button 
-              className={`flying-osd-switch ${mapVisible ? 'on' : 'off'}`}
-              onClick={onMapToggle}
+              type="button"
+              className={`flying-osd-switch ${mapVisible ? 'on' : 'off'} map-mode-${mapMode}`}
+              onClick={onMapCycle}
+              title={mapModeTitle}
             >
               <span className="switch-label">MAP</span>
               <span className="switch-indicator"></span>

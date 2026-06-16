@@ -2094,6 +2094,15 @@ body {
   filter: drop-shadow(0 0 3px color-mix(in srgb, var(--theme-status-critical) 55%, transparent));
 }
 
+/* ========== FPV MINIMAP (square resizable panel mode) ========== */
+.flying-drone-osd .fpv-minimap .map-panel {
+  width: 480px;
+}
+
+.flying-drone-osd .fpv-minimap .map-body {
+  height: 144px;
+}
+
 /* ========== VOLYA MINIMAP (wider and shorter than default) ========== */
 .volya-drone-osd .volya-minimap .map-panel {
   width: 480px;

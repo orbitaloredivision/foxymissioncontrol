@@ -17,6 +17,8 @@ export { HudCompass } from './HudCompass'
 export { HeadingTape } from './HeadingTape'
 export { MapPanel } from './MapPanel'
 export { MapBlot } from './MapBlot'
+export { ResizableMapPanel } from './ResizableMapPanel'
+export { FPV_MAP_MODES, cycleFpvMapMode, isFpvMapVisible } from './mapModes'
 
 // Controls
 export { QualitySwitch } from './QualitySwitch'

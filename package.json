@@ -7,6 +7,7 @@
     "dev": "vite",
     "server": "node server/index.js",
     "build": "vite build",
+    "deploy:dev": "ORANGE_PI_HOST=192.168.88.15 ./deploy-to-orangepi.sh",
     "lint": "eslint .",
     "preview": "vite preview"
   },
