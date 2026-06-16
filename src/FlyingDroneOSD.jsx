@@ -2,7 +2,7 @@
  * Flying Drone OSD (Generic FPV)
  * OSD layout for FPV quadcopters
  */
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import CameraFeed from './components/CameraFeed'
 import {
@@ -19,9 +19,11 @@ import {
   HeadingCompassArc,
   cycleFpvMapMode,
   isFpvMapVisible,
+  getInitialFpvMapMode,
+  getInitialFpvOsdVisible,
+  FPV_MAP_MODES,
 } from './components/osd'
 import { useDronePref } from './hooks/useDronePref'
-import { getDronePref } from './utils/dronePrefs'
 
 /**
  * Flying Drone OSD Component
@@ -46,19 +48,23 @@ export default function FlyingDroneOSD({
 }) {
   const { t } = useTranslation()
 
-  const [mapMode, setMapMode] = useDronePref(droneId, 'mapMode', 'blot')
-  const [osdVisible, setOsdVisible] = useState(true)
+  const [mapMode, setMapMode] = useDronePref(droneId, 'mapMode', getInitialFpvMapMode(droneId))
+  const [osdVisible, setOsdVisible] = useDronePref(droneId, 'osdVisible', getInitialFpvOsdVisible(droneId))
 
-  // Migrate legacy boolean mapVisible cookie to mapMode.
+  // Repair invalid stored map mode (e.g. legacy cookie values).
   useEffect(() => {
     if (!droneId) return
-    const savedMode = getDronePref(droneId, 'mapMode', null)
-    if (savedMode !== null) return
-    const legacyVisible = getDronePref(droneId, 'mapVisible', null)
-    if (legacyVisible !== null) {
-      setMapMode(legacyVisible ? 'blot' : 'hidden')
+    if (!FPV_MAP_MODES.includes(mapMode)) {
+      setMapMode(getInitialFpvMapMode(droneId))
     }
-  }, [droneId, setMapMode])
+  }, [droneId, mapMode, setMapMode])
+
+  useEffect(() => {
+    if (!droneId) return
+    if (typeof osdVisible !== 'boolean') {
+      setOsdVisible(getInitialFpvOsdVisible(droneId))
+    }
+  }, [droneId, osdVisible, setOsdVisible])
 
   const cycleMapMode = () => setMapMode((current) => cycleFpvMapMode(current))
 
@@ -163,7 +169,7 @@ export default function FlyingDroneOSD({
             osdVisible={osdVisible}
             onMapCycle={cycleMapMode}
             mapModeTitle={mapModeTitle}
-            onOsdToggle={() => setOsdVisible(!osdVisible)}
+            onOsdToggle={() => setOsdVisible((visible) => !visible)}
           />
         </div>
       </div>
