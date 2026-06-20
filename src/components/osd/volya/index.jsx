@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import CameraFeed from '../../CameraFeed'
+import { MainCameraBackground } from '../MainCameraBackground'
 import VolyaGearIndicator from './VolyaGearIndicator'
 import VolyaStatusIndicators from './VolyaStatusIndicators'
 import VolyaAttitudeDial from './VolyaAttitudeDial'
@@ -16,11 +16,7 @@ import { useMapResize } from '../useMapResize'
 import { useDronePref } from '../../../hooks/useDronePref'
 
 export function VolyaMainCamera({ streamUrl }) {
-  return (
-    <div className="main-camera-bg">
-      <CameraFeed streamUrl={streamUrl} />
-    </div>
-  )
+  return <MainCameraBackground streamUrl={streamUrl} />
 }
 
 export function VolyaHudTopBar({ telemetry, isActive, onShareClick }) {

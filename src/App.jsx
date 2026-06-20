@@ -13,6 +13,7 @@ import { DRONE_TYPES } from './telemetrySchemas'
 import GroundDroneOSD from './GroundDroneOSD'
 import FlyingDroneOSD from './FlyingDroneOSD'
 import VolyaDroneOSD from './VolyaDroneOSD'
+import { CameraObjectFitProvider } from './components/osd/CameraObjectFitContext'
 import { useDronePref } from './hooks/useDronePref'
 import { getMainCameraUrl, resolveFrontCameraUrls } from './utils/cameraUrls'
 
@@ -479,8 +480,9 @@ function App() {
 
   return (
     <div className="hud-container">
-      {/* Render OSD based on drone type */}
-      {renderOSD()}
+      <CameraObjectFitProvider droneId={droneId}>
+        {renderOSD()}
+      </CameraObjectFitProvider>
       
       {/* Telemetry Log - hidden for flying OSD, visible for ground */}
       <div className={`hud-telemetry-log-container ${droneType === DRONE_TYPES.GENERIC_FPV ? 'hidden' : ''}`}>

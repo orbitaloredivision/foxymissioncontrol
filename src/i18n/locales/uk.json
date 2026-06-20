@@ -379,6 +379,11 @@
     "rearCameraRtsp": "Задня камера",
     "copy": "Копіювати",
     "copied": "Скопійовано!"
+  },
+
+  "cameraFit": {
+    "switchToCover": "Перемкнути на cover (обрізати під екран)",
+    "switchToFill": "Перемкнути на fill (розтягнути на екран)"
   }
 }
 

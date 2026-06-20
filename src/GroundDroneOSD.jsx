@@ -6,9 +6,9 @@
  */
 import { useTranslation } from 'react-i18next'
 import { DRONE_TYPES } from './telemetrySchemas'
-import CameraFeed from './components/CameraFeed'
 import {
   HudTopBar,
+  MainCameraBackground,
   HudLeftPanel,
   FuseSwitch,
   Speedometer,
@@ -52,9 +52,7 @@ export default function GroundDroneOSD({
   return (
     <>
       {/* Full-screen Front Camera Background */}
-      <div className="main-camera-bg">
-        <CameraFeed streamUrl={mainCameraUrl} />
-      </div>
+      <MainCameraBackground streamUrl={mainCameraUrl} />
 
       {/* HUD Overlay - ugv modifier hides mirror section and repositions heading tape */}
       <div className={`hud-overlay ${isUgv ? 'hud-overlay--ugv' : ''}`}>

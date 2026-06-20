@@ -7,11 +7,12 @@ import { useTranslation } from 'react-i18next'
 import { ShareButton } from '../ShareInfoModal'
 import FoxyLogo from '../FoxyLogo'
 import { BatteryIndicator } from './BatteryIndicator'
+import { CameraFitButton } from './CameraFitButton'
 
 export function HudTopBar({ 
   telemetry, 
   isActive, 
-  onShareClick, 
+  onShareClick,
   showFailsafe = true,
   showFlightMode = false,
   showStatusMode = true
@@ -43,6 +44,7 @@ export function HudTopBar({
       </div>
 
       <div className="hud-right-indicators">
+        <CameraFitButton />
         {showFailsafe && (
           <span className={`status-fs ${telemetry.fs > 0 ? 'active' : ''}`}>
             FAILSAFE:{telemetry.fs || 0}

@@ -286,6 +286,24 @@ body.theme-aggressive-red .share-btn-card:hover {
   border-color: #ff4444;
 }
 
+.camera-fit-btn {
+  padding: 0;
+}
+
+.camera-fit-btn svg {
+  width: 34px;
+  height: 34px;
+  display: block;
+}
+
+.camera-fit-btn--fill {
+  background: rgba(0, 255, 136, 0.15);
+}
+
+body.theme-aggressive-red .camera-fit-btn--fill {
+  background: rgba(255, 68, 68, 0.15);
+}
+
 body.theme-aggressive-red .share-section-header {
   color: #ff4444;
   border-bottom-color: rgba(255, 68, 68, 0.3);

@@ -4,9 +4,9 @@
  */
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import CameraFeed from './components/CameraFeed'
 import {
   HudTopBar,
+  MainCameraBackground,
   HudLeftPanel,
   FlyingTelemetryStrip,
   MapBlot,
@@ -77,9 +77,7 @@ export default function FlyingDroneOSD({
   return (
     <>
       {/* Full-screen Front Camera Background */}
-      <div className="main-camera-bg">
-        <CameraFeed streamUrl={mainCameraUrl} />
-      </div>
+      <MainCameraBackground streamUrl={mainCameraUrl} />
       
       {/* Artificial Horizon Overlay - covers camera view, toggles with OSD */}
       <div className={`flying-osd-elements ${osdVisible ? '' : 'hidden'}`}>

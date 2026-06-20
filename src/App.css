@@ -50,6 +50,10 @@ body {
   object-fit: cover;
 }
 
+.main-camera-bg.main-camera-bg--fill .camera-video {
+  object-fit: fill;
+}
+
 /* ========== HUD OVERLAY ========== */
 .hud-overlay {
   position: absolute;

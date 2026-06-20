@@ -377,6 +377,11 @@
     "rearCameraRtsp": "Rear Camera",
     "copy": "Copy",
     "copied": "Copied!"
+  },
+
+  "cameraFit": {
+    "switchToCover": "Switch to cover (crop to fill screen)",
+    "switchToFill": "Switch to fill (stretch to screen)"
   }
 }
 

@@ -27,6 +27,9 @@ export { ControlIcon } from './ControlIcon'
 
 // Panels
 export { HudTopBar } from './HudTopBar'
+export { CameraFitButton } from './CameraFitButton'
+export { CameraObjectFitProvider } from './CameraObjectFitContext'
+export { MainCameraBackground } from './MainCameraBackground'
 export { HudLeftPanel } from './HudLeftPanel'
 
 // Displays
