@@ -818,6 +818,14 @@ body {
 .mirror-heading-area {
   width: 300px;
   margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: visible;
+}
+
+.mirror-heading-area .heading-tape {
+  width: 100%;
 }
 
 /* Fuse Switch */
@@ -951,8 +959,11 @@ body {
 .warning-banner {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   padding: 8px 20px;
+  width: max-content;
+  max-width: calc(100vw - 40px);
   animation: warning-pulse 0.3s ease-in-out infinite;
 }
 
@@ -2981,6 +2992,26 @@ body {
   .mirror-heading-area {
     width: 260px;
   }
+
+  .warning-text {
+    font-size: 1rem;
+    letter-spacing: 2px;
+  }
+
+  .warning-frame {
+    padding: 5px 14px;
+    gap: 8px;
+  }
+
+  .warning-banner {
+    gap: 6px;
+    padding: 6px 12px;
+  }
+
+  .warning-chevrons {
+    font-size: 0.85rem;
+    gap: 2px;
+  }
   
   .hud-overlay--ugv .hud-heading-tape {
     top: 60px;
@@ -3018,6 +3049,16 @@ body {
   
   .mirror-heading-area {
     width: 240px;
+  }
+
+  .warning-text {
+    font-size: 0.95rem;
+    letter-spacing: 2px;
+  }
+
+  .warning-subtext {
+    font-size: 0.65rem;
+    letter-spacing: 2px;
   }
   
   .hud-overlay--ugv .hud-heading-tape {
@@ -3065,6 +3106,35 @@ body {
   
   .mirror-heading-area {
     width: 180px;
+  }
+
+  .warning-text {
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+  }
+
+  .warning-frame {
+    padding: 4px 10px;
+    gap: 6px;
+  }
+
+  .warning-banner {
+    gap: 4px;
+    padding: 4px 8px;
+  }
+
+  .warning-chevrons {
+    font-size: 0.75rem;
+    gap: 1px;
+  }
+
+  .warning-subtext {
+    font-size: 0.55rem;
+    letter-spacing: 1px;
+  }
+
+  .warning-icon {
+    font-size: 0.85rem;
   }
   
   .hud-minimap-container {

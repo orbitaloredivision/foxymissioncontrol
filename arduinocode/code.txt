@@ -1,0 +1,2093 @@
+#include <SPI.h>
+#include <Wire.h>
+#include <WiFi.h>
+#include <SPIFFS.h>
+#include <endian.h>
+#include <Ethernet.h>
+#include <TinyGPS++.h>
+#include <WebServer.h>
+#include <Preferences.h>
+#include <SoftwareSerial.h>
+#include <HardwareSerial.h>
+// #include <FastLED.h>
+#include "web.h"
+
+#include <NimBLEDevice.h>
+
+#include "CRSF.h"
+#include "src/dhcp/DhcpServer.h"
+#include "SparkFun_BNO08x_Arduino_Library.h"
+
+
+// ==========================
+// ВИБІР ПЛАТИ
+// ==========================
+#define BOARD_S2 2
+#define BOARD_S3 3
+
+#define HW_BOARD BOARD_S3   // <-- тут міняємо: BOARD_S2 або BOARD_S3
+// ==========================
+// ПІНИ ДЛЯ РІЗНИХ ПЛАТ
+// ==========================
+#if HW_BOARD == BOARD_S3
+
+  #define MASTER_PIN 37
+  #define CONF_PIN   40
+
+  #define BATT_PIN 4
+
+  // Ethernet W5500
+  #define W5500_SCK  12
+  #define W5500_MISO 13
+  #define W5500_MOSI 11
+  #define W5500_CS   10
+
+  // I2C
+  // #define I2C_SDA 8
+  // #define I2C_SCL 9
+
+  // CRSF UART1
+  #define CRSF_RX 18
+  #define CRSF_TX 17
+
+  // CRSF UART2
+  #define CRSF2_RX 16
+  #define CRSF2_TX 15
+
+  // GPS
+  #define GPS_RX_PIN 7//change it!!!!
+  #define GPS_TX_PIN 6
+
+  //LED
+  #define LED_PIN     5
+  #define NUM_LEDS    1
+  #define BRIGHTNESS  100
+
+  static DeviceState d;
+  static DeviceState s;
+
+  String terminalBuffer;
+  
+  // CRGB leds[NUM_LEDS];
+
+  // unsigned long ledTime = 0;
+  // unsigned long ledBlinkTime = 0;
+
+  bool isNoEthernet = false; //червоний
+  bool isNoIP = false; //рожевий
+  bool isFound = false; //жовтий
+  bool isPair = false; //зелений
+  bool isNoGPS = false; //синій
+  bool isNoGPSSignal = false; //фіолетовий
+
+  unsigned long isNRKTime = 0;
+
+  unsigned long doDHCPTime = 0;
+
+  bool isBatteryConnected = false;
+  float batt_cof = 1.0f;
+  float batteryVoltage = 0.0f;
+  unsigned long batteryTime = 0;
+
+#elif HW_BOARD == BOARD_S2
+
+  #define MASTER_PIN 35
+  #define CONF_PIN   32
+
+  // Ethernet W5500
+  #define W5500_CS   5
+  // SCK/MISO/MOSI для S2 не задаємо окремо,
+  // бо зараз у тебе використовується стандартний SPI.begin()
+
+  // I2C
+  // якщо на S2 стандартні піни - можна не задавати
+  // якщо теж хочеш явно задати, тоді впиши сюди свої значення
+
+  // CRSF UART1
+  #define CRSF_RX 16
+  #define CRSF_TX 17
+
+  // CRSF UART2
+  #define CRSF2_RX 14
+  #define CRSF2_TX 27
+
+  // GPS
+  #define GPS_RX_PIN 34
+  #define GPS_TX_PIN 1
+
+#else
+  #error "Unknown board selected"
+#endif
+// https://github.com/crsf-wg/crsf/wiki/CRSF-Addresses
+// https://github.com/crsf-wg/crsf/wiki/Packet-Types
+// https://github.com/crsf-wg/crsf/wiki/Message-Format
+
+// UART-like service UUIDs
+static BLEUUID SERVICE_UUID("9f3a2c1e-7b44-4d8a-bc9e-1a6c0f8d7b21");
+static BLEUUID RX_UUID     ("e2b1f4a9-6c3d-4a7e-9f52-8a0b1c2d3e44");
+static BLEUUID TX_UUID     ("7c8d9e10-2a3b-4c5d-8e9f-a1b2c3d4e5f6");
+// =======================
+
+#define WWW_IP "185.233.117.8"
+#define IP_DURATION_MIN 30
+#define IP_DELAY_MS 10000
+bool ip_sent = true;
+uint32_t ip_last_try;
+uint32_t ip_timeout = 0;
+
+static NimBLECharacteristic* txChar = nullptr;
+
+// DHCP state
+bool      dhcpRequested = false;
+bool      dhcpDone      = false;
+unsigned long dhcpStartTime;
+IPAddress dhcpIP;
+
+
+// ethernet
+#define DISCOVER_PORT 8888
+#define COMM_PORT 1091
+#define MAX_DEVICES   10
+
+bool confMode = false;
+
+bool discoverRequested = false;
+uint32_t discoverStartTime;
+
+uint32_t lastLanEventTime = 0;
+bool lanTimeout = true;
+
+IPAddress ethIp;
+EthernetUDP UdpCom;
+EthernetUDP UdpDisc;
+EthernetServer ethServer(80);
+bool ethOk = false;
+char ethBuff[1024];
+char ethPage[256];
+char ethTmp[128];
+
+// crsf
+uint8_t inBuffer[CRSF_MAX_PACKET_LEN+4];
+int bufferIndex = 0;
+int addr = 0;
+int len = 0;
+int mtype = 0;
+int crc = 0;
+bool sync_ = false;
+
+// crsf2
+uint8_t inBuffer2[CRSF_MAX_PACKET_LEN+4];
+int bufferIndex2 = 0;
+int addr2 = 0;
+int len2 = 0;
+int mtype2 = 0;
+int crc2 = 0;
+bool sync2_ = false;
+
+
+HardwareSerial crsf_port(2);
+HardwareSerial crsf2_port(1);
+
+// — AP creds & static-IP for the AP
+const char* AP_SSID    = "XXX";
+const char* AP_PASS    = "11111111";
+IPAddress   AP_IP      = {10, 0, 0, 1};
+IPAddress   AP_GATEWAY = {10, 0, 0, 1};
+IPAddress   AP_SUBNET  = {255, 255, 255, 0};
+
+WebServer server(80);
+
+byte ethMac[6];
+String    defaultIP   = "192.168.0.56";
+String    localIP   = "192.168.0.55";
+String    targetIP  = "192.168.0.56";
+IPAddress targetIPobj;
+bool master = false;
+uint32_t crsfSpeed = 115200;
+uint32_t crsf2Speed = 115200;
+
+bool dhcp_server = true;
+DhcpServer dhcp;
+
+// bno smooth values
+#define BNO08X_1_ADDR 0x4A
+#define BNO08X_2_ADDR 0x4B
+#define WINDOW_SIZE 20  // Median filter window size. larger is smoother but adds delay
+#define ALPHA 0.02      // Low-pass filter weight (smoothing factor). lower means smoother
+// Variables for X and Y axes
+float xReadings[WINDOW_SIZE];  // Sliding window for median filter (X-axis)
+float yReadings[WINDOW_SIZE];  // Sliding window for median filter (Y-axis)
+int currentReadingIndex = 0;          // Index for the sliding window
+int currentReadingInit = 0;
+uint32_t last_bno_store = 0;
+int16_t last_bno_store_z = 0;
+BNO08x bno;
+bool bno_ok = false;
+float AX2_moff = 0.0;
+float AY2_moff = 0.0;
+float AZ2_moff = 0.0;
+float AZ2_off = 0.0;
+volatile float AX2_value_raw = 0.0;
+volatile float AX2_value = 0.0;
+volatile float AY2_value_raw = 0.0;
+volatile float AY2_value = 0.0;
+volatile float AZ2_value_raw = 0.0;
+volatile float AZ2_value = 0.0;
+uint32_t lastBnoQTime;
+uint32_t lastBnoPrintTime;
+
+// --- GPS ---
+//#define DEBUG_GPS 1
+#define GPS_OK_AGE 10000
+//EspSoftwareSerial::UART GPS_SERIAL;
+HardwareSerial GPS_SERIAL (0);
+// #define Serial GPS_SERIAL
+
+TinyGPSPlus gps;
+double gps_lat = 0;
+double gps_lng = 0;
+double gps_alt = 0;
+uint32_t gps_num_sat = 0;
+double gps_deg;
+double gps_speed;
+uint8_t gps_ok = 0;
+bool no_gps = true;
+unsigned long gps_timer = 0;
+
+volatile uint8_t batt_remaining = 90;
+float Temp1_value = 0.0;
+volatile float V1_value = 41.0;
+
+bool crsf_fail = true;
+bool crsf1_fail = true;
+bool crsf2_fail = true;
+uint32_t crsf_last_msg = 0;
+uint32_t crsf2_last_msg = 0;
+uint32_t out_last_msg = 0;
+uint32_t out_last_hb = 0;
+uint32_t in_last_msg = 0;
+float UGN_MIN = -25.0;
+float UGN_MAX = 25.0;
+float UVN_MIN = -9.0;
+float UVN_MAX = 28.0;
+// -----------
+
+static uint8_t crsf_crc8tab[256] = {0x00, 0xD5, 0x7F, 0xAA, 0xFE, 0x2B, 0x81, 0x54, 0x29, 0xFC, 0x56, 0x83, 0xD7, 0x02, 0xA8, 0x7D, 0x52, 0x87, 0x2D, 0xF8, 0xAC, 0x79, 0xD3, 0x06, 0x7B, 0xAE, 0x04, 0xD1, 0x85, 0x50, 0xFA, 0x2F, 0xA4, 0x71, 0xDB, 0x0E, 0x5A, 0x8F, 0x25, 0xF0, 0x8D, 0x58, 0xF2, 0x27, 0x73, 0xA6, 0x0C, 0xD9, 0xF6, 0x23, 0x89, 0x5C, 0x08, 0xDD, 0x77, 0xA2, 0xDF, 0x0A, 0xA0, 0x75, 0x21, 0xF4, 0x5E, 0x8B, 0x9D, 0x48, 0xE2, 0x37, 0x63, 0xB6, 0x1C, 0xC9, 0xB4, 0x61, 0xCB, 0x1E, 0x4A, 0x9F, 0x35, 0xE0, 0xCF, 0x1A, 0xB0, 0x65, 0x31, 0xE4, 0x4E, 0x9B, 0xE6, 0x33, 0x99, 0x4C, 0x18, 0xCD, 0x67, 0xB2, 0x39, 0xEC, 0x46, 0x93, 0xC7, 0x12, 0xB8, 0x6D, 0x10, 0xC5, 0x6F, 0xBA, 0xEE, 0x3B, 0x91, 0x44, 0x6B, 0xBE, 0x14, 0xC1, 0x95, 0x40, 0xEA, 0x3F, 0x42, 0x97, 0x3D, 0xE8, 0xBC, 0x69, 0xC3, 0x16, 0xEF, 0x3A, 0x90, 0x45, 0x11, 0xC4, 0x6E, 0xBB, 0xC6, 0x13, 0xB9, 0x6C, 0x38, 0xED, 0x47, 0x92, 0xBD, 0x68, 0xC2, 0x17, 0x43, 0x96, 0x3C, 0xE9, 0x94, 0x41, 0xEB, 0x3E, 0x6A, 0xBF, 0x15, 0xC0, 0x4B, 0x9E, 0x34, 0xE1, 0xB5, 0x60, 0xCA, 0x1F, 0x62, 0xB7, 0x1D, 0xC8, 0x9C, 0x49, 0xE3, 0x36, 0x19, 0xCC, 0x66, 0xB3, 0xE7, 0x32, 0x98, 0x4D, 0x30, 0xE5, 0x4F, 0x9A, 0xCE, 0x1B, 0xB1, 0x64, 0x72, 0xA7, 0x0D, 0xD8, 0x8C, 0x59, 0xF3, 0x26, 0x5B, 0x8E, 0x24, 0xF1, 0xA5, 0x70, 0xDA, 0x0F, 0x20, 0xF5, 0x5F, 0x8A, 0xDE, 0x0B, 0xA1, 0x74, 0x09, 0xDC, 0x76, 0xA3, 0xF7, 0x22, 0x88, 0x5D, 0xD6, 0x03, 0xA9, 0x7C, 0x28, 0xFD, 0x57, 0x82, 0xFF, 0x2A, 0x80, 0x55, 0x01, 0xD4, 0x7E, 0xAB, 0x84, 0x51, 0xFB, 0x2E, 0x7A, 0xAF, 0x05, 0xD0, 0xAD, 0x78, 0xD2, 0x07, 0x53, 0x86, 0x2C, 0xF9};
+
+// discovering
+struct Device {
+  uint8_t mac[6];
+  uint8_t ip[4];
+  bool master;
+};
+struct __attribute__((packed)) Device2 {
+  uint8_t mac[6];
+  uint8_t ip[4];
+  uint8_t targetIp[4];
+  bool master;
+  uint32_t crsfSpeed;
+  uint32_t crsf2Speed;
+};
+Device devices[MAX_DEVICES];
+int deviceCount = 0;
+
+static void sendReply(const char* s) {
+  if (!txChar) return;
+  txChar->setValue((uint8_t*)s, strlen(s));
+  txChar->notify();
+}
+
+class ServerCallbacks : public NimBLEServerCallbacks {
+  void onConnect(NimBLEServer* s, NimBLEConnInfo& info) override {
+    addLog("BLE Client connected", "info");
+  }
+  void onDisconnect(NimBLEServer* s, NimBLEConnInfo& info, int reason) override {
+    addLog("BLE Client disconnected", "info");
+    NimBLEDevice::startAdvertising();
+  }
+};
+
+class RxCallbacks : public NimBLECharacteristicCallbacks {
+  void onWrite(NimBLECharacteristic* c, NimBLEConnInfo& info) override {
+    std::string v = c->getValue();
+    String cmd(v.c_str());
+    cmd.trim();
+
+    if (cmd == "GET_IP") {
+      String reply = "OK "+localIP+" "+targetIP+(master ? " 1 " : " 0 ")+crsfSpeed+" "+(master ? 0 : crsf2Speed)+" ";
+      
+      char macSuffix[9];
+      snprintf(macSuffix, sizeof(macSuffix), "%02X%02X%02X%02X", ethMac[2], ethMac[3], ethMac[4], ethMac[5]);
+      reply += macSuffix;
+
+      reply += "\n";
+      
+      sendReply(reply.c_str());
+    } else {
+      sendReply("ERR UNKNOWN_CMD\n");
+    }
+  }
+};
+
+// WWW <-> MAC
+// --- helpers ---
+static String macToString(const byte mac[6]) {
+  char buf[18];
+  snprintf(buf, sizeof(buf), "%02X:%02X:%02X:%02X:%02X:%02X",
+           mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  return String(buf);
+}
+
+// Reads status line + headers, returns HTTP status code, and leaves client positioned at body.
+static int readHttpStatusAndSkipHeaders(EthernetClient &client, uint32_t timeoutMs) {
+  uint32_t start = millis();
+
+  // Read the status line: "HTTP/1.1 200 OK"
+  String statusLine;
+  while (millis() - start < timeoutMs) {
+    while (client.available()) {
+      char c = (char)client.read();
+      if (c == '\r') continue;
+      if (c == '\n') goto got_status;
+      statusLine += c;
+      if (statusLine.length() > 200) goto got_status; // safety
+    }
+    if (!client.connected()) break;
+    delay(1);
+  }
+got_status:
+
+  int code = -1;
+  int sp1 = statusLine.indexOf(' ');
+  if (sp1 >= 0) {
+    int sp2 = statusLine.indexOf(' ', sp1 + 1);
+    if (sp2 < 0) sp2 = statusLine.length();
+    code = statusLine.substring(sp1 + 1, sp2).toInt();
+  }
+
+  // Skip headers until blank line
+  String line;
+  while (millis() - start < timeoutMs) {
+    while (client.available()) {
+      char c = (char)client.read();
+      if (c == '\r') continue;
+      if (c == '\n') {
+        if (line.length() == 0) return code; // end of headers
+        line = "";
+      } else {
+        line += c;
+        if (line.length() > 300) line.remove(0, 200); // prevent runaway
+      }
+    }
+    if (!client.connected()) break;
+    delay(1);
+  }
+
+  return code;
+}
+
+// --- main function ---
+// serverHost: e.g. "192.168.0.5" or "myserver.local"
+// serverPort: usually 8080
+// path: usually "/store"
+bool sendMacAndIpToServer(const char *serverHost, uint16_t serverPort = 8080, const char *path = "/store") {
+  EthernetClient client;
+
+  // Build URL query
+  String macStr = macToString(ethMac);
+
+  // Basic URL encoding for ':' just in case (optional, but safe)
+  String macEnc = macStr;
+  macEnc.replace(":", "%3A");
+
+  String reqPath = String(path) + "?mac=" + macEnc + "&ip=" + localIP;
+
+  if (!client.connect(serverHost, serverPort)) {
+    client.stop();
+    return false;
+  }
+
+  // Send request
+  client.print("GET ");
+  client.print(reqPath);
+  client.print(" HTTP/1.1\r\nHost: ");
+  client.print(serverHost);
+  client.print("\r\nConnection: close\r\n\r\n");
+
+  // Read response: require HTTP 200 and body exactly "1"
+  const uint32_t TIMEOUT_MS = 3000;
+  int code = readHttpStatusAndSkipHeaders(client, TIMEOUT_MS);
+  if (code != 200) {
+    client.stop();
+    return false;
+  }
+
+  // Read body (trim whitespace) and check it equals "1"
+  uint32_t start = millis();
+  String body;
+  while (millis() - start < TIMEOUT_MS) {
+    while (client.available()) {
+      char c = (char)client.read();
+      body += c;
+      if (body.length() > 64) { // body should be tiny; prevent memory blowup
+        // keep last 64 chars
+        body.remove(0, body.length() - 64);
+      }
+    }
+    if (!client.connected()) break;
+    delay(1);
+  }
+  client.stop();
+
+  body.trim();
+  return (body == "1");
+}
+// WWW <-> MAC END
+
+void generateRandomMac(byte *mac) {
+  mac[0] = 0x14; mac[1] = 0x88;
+  for (int i = 2; i < 6; i++) {
+    mac[i] = esp_random() & 0xFF;
+  }
+}
+
+void printMac(const byte *mac) {
+  for (int i = 0; i < 6; i++) {
+    if (i > 0) Serial.print(":");
+    if (mac[i] < 16) Serial.print("0");
+    Serial.print(mac[i], HEX);
+  }
+  Serial.println();
+}
+
+void read_settings() {
+  Preferences pref;
+  pref.begin("main", false);
+  
+  if (pref.isKey("ethMac")) {
+    // Load saved MAC
+    pref.getBytes("ethMac", ethMac, 6);
+    ethMac[0] = 0x14; ethMac[1] = 0x88;
+    Serial.print("Device MAC: ");
+  } else {
+    // Generate new random MAC
+    generateRandomMac(ethMac);
+    pref.putBytes("ethMac", ethMac, 6);
+    Serial.print("Device new MAC: ");
+  }
+  printMac(ethMac);
+
+  if (!pref.isKey("localIP") && !master) {
+    Serial.println("Swap IP");
+    // swap localIP / targetIP for slave device
+    String tmpTargetIP = targetIP;
+    targetIP = localIP;
+    localIP = tmpTargetIP;
+  }
+
+  if (master) {
+    dhcp_server = pref.getBool("dhcp", dhcp_server);
+  }
+
+  
+
+  localIP = pref.getString("localIP", localIP);
+  targetIP = pref.getString("targetIP", targetIP);
+  addLog("LocalIP: "+localIP, "info");
+  addLog("TargetIP: "+targetIP, "info");
+
+  batt_cof = pref.getFloat("batt_cof", batt_cof);
+
+  isBatteryConnected = pref.getBool("isBattery", isBatteryConnected);
+
+  if(batt_cof < 0.5){
+    batt_cof = 1.0f;
+  }
+
+  if(localIP == defaultIP){
+    isNoIP = true;
+  }
+
+  crsfSpeed = pref.getULong("crsfSpeed", crsfSpeed);
+  if (!master) {
+    crsf2Speed = pref.getULong("crsf2Speed", crsf2Speed);
+  }
+
+  stringToIPAddress(targetIP+"", targetIPobj);
+
+  pref.end();
+}
+
+void eth_setup() {
+  ethOk = eth_init();
+  
+  if (master && dhcp_server) {
+    addLog("DHCP server ON", "info");
+
+    // reserve first 10 IPs for devices whose MAC starts 0x12,0x34
+    dhcp.setReservedPrefix(0x14,0x88, 10);
+
+    // turn on debug prints
+    dhcp.setDebug(true);
+
+    IPAddress ip = Ethernet.localIP();
+    dhcp.begin(
+      IPAddress(ip[0],ip[1],ip[2],10),
+      IPAddress(ip[0],ip[1],ip[2],250),
+      IPAddress(ip[0],ip[1],ip[2],1),
+      IPAddress(255,255,255,0),
+      UINT32_MAX
+    );
+  }
+
+  if(ethOk){
+    addLog("ETH Setup done", "ok");
+  }else{
+    addLog("ETH Setup error", "err");
+  }
+}
+
+/*
+void eth_restart() {
+  stringToIPAddress(cIP+"", ethIp);
+  stringToIPAddress(cbIP+"", broadcastIp);
+  Ethernet.begin(ethMac, ethIp);
+  Serial.print("server is at ");
+  Serial.println(Ethernet.localIP());
+}
+*/
+
+void getOkHead(EthernetClient client) {
+  client.println("HTTP/1.1 200 OK");
+  client.println("Content-Type: text/plain");
+  client.println("Connection: close");
+  client.println();
+}
+
+bool stringToIPAddress(const String& str, IPAddress& ip) {
+  int parts[4] = {0};
+  int index = 0;
+
+  // Split the string by '.' and convert to integers
+  char* token = strtok(const_cast<char*>(str.c_str()), ".");
+  while (token != nullptr && index < 4) {
+    parts[index++] = atoi(token);
+    token = strtok(nullptr, ".");
+  }
+
+  // Check if we got exactly 4 parts
+  if (index != 4) {
+    return false; // Invalid IP address
+  }
+
+  // Validate each part (0-255) and assign to IPAddress
+  for (int i = 0; i < 4; i++) {
+    if (parts[i] < 0 || parts[i] > 255) {
+      return false; // Invalid range
+    }
+  }
+
+  ip = IPAddress(parts[0], parts[1], parts[2], parts[3]);
+  return true;
+}
+
+void eth_init0() {
+#if HW_BOARD == BOARD_S3
+  SPI.begin(W5500_SCK, W5500_MISO, W5500_MOSI, W5500_CS);
+#else
+  SPI.begin();
+#endif
+
+  pinMode(W5500_CS, OUTPUT);
+  digitalWrite(W5500_CS, HIGH);
+  delay(300);
+
+  Ethernet.init(W5500_CS);
+  delay(200);
+}
+
+bool eth_init() {
+  stringToIPAddress(localIP+"", ethIp);
+  //stringToIPAddress(cbIP+"", broadcastIp);
+
+  if (master && dhcp_server) {
+    ethIp[3] = 1;
+    localIP = ethIp.toString();
+  }
+
+  // start the Ethernet connection and the server:
+  Ethernet.begin(ethMac, ethIp);
+
+  UdpCom.begin(COMM_PORT);
+  UdpDisc.begin(DISCOVER_PORT);
+
+  // Check for Ethernet hardware present
+  if (Ethernet.hardwareStatus() == EthernetNoHardware) {
+    addLog("Ethernet shield was not found.", "err");
+    return false;
+  }
+  if (Ethernet.linkStatus() == LinkOFF) {
+    addLog("Ethernet cable is not connected.", "err");
+    isNoEthernet = true;
+  }else{
+    isNoEthernet = false;
+  }
+
+  // start the server
+  ethServer.begin();
+  // String etIP = String(Ethernet.localIP());
+  String etIP = Ethernet.localIP().toString();
+  addLog("Server is at " + etIP, "info");
+
+  return true;
+}
+
+void writeFloat(EthernetClient client, String name, float val) {
+  client.print(name);
+  client.print("=");
+  client.print(val);
+  client.print("\n");
+}
+void writeFloat7(EthernetClient client, String name, float val) {
+  client.print(name);
+  client.print("=");
+  client.print(val,7);
+  client.print("\n");
+}
+void writeInt(EthernetClient client, String name, int16_t val) {
+  client.print(name);
+  client.print("=");
+  client.print(val);
+  client.print("\n");
+}
+
+bool getPage(char* page, EthernetClient client) {
+  uint32_t now = millis();
+  // print current telemetry
+  if (strcmp(page, "/t") == 0) {
+    getOkHead(client);
+
+    // zoom level
+    client.print("zoom=1\n");
+    
+    // turret name
+    client.print("name=Volya-E\n");
+    
+    // shots
+    client.print("shots=\n");
+    
+    // UVN
+    writeInt(client, "BATT", batt_remaining);
+    client.print("SAFE=1\n");
+    client.print("STAB=0\n");
+    client.print("Temp1=0\n");
+    client.print("Temp2=0\n");
+    client.print("SX1=0\n");
+    client.print("SY1=0\n");
+    client.print("SZ1=0\n");
+    writeFloat(client, "AX1", AX2_value);
+    writeFloat(client, "AY1", AY2_value);
+    writeFloat(client, "AZ1", AZ2_value);
+    
+    writeFloat(client, "AX2", AX2_value);
+    writeFloat(client, "AY2", AY2_value);
+    writeFloat(client, "AZ2", AZ2_value);
+    client.print("UVN=0\n");
+    writeFloat(client, "V1", V1_value);
+
+    writeFloat7(client, "GLAT", gps_lat);
+    writeFloat7(client, "GLNG", gps_lng);
+    writeFloat(client, "GALT", gps_alt);
+    writeFloat(client, "GDEG", gps_deg);
+    writeFloat(client, "GSPD", gps_speed);
+    writeInt(client, "GSAT", gps_num_sat);
+    writeInt(client, "GOK", no_gps ? -1 : gps_ok);
+
+    //client.print("B=0\n");
+    writeInt(client, "B", (uint16_t) gps_speed);
+    writeInt(client, "UGMIN", UGN_MIN);
+    writeInt(client, "UGMAX", UGN_MAX);
+    writeInt(client, "UVMIN", UVN_MIN);
+    writeInt(client, "UVMAX", UVN_MAX);
+    client.print("servo_add=0\n");
+
+    // AIM counter
+    client.print("aim=0\naimc=0\naime=0\n");
+
+    client.print(crsf_fail ? "CRSF=0\n" : "CRSF=1\n");
+    
+    client.print("RT=0\n");
+    
+    unsigned long currentMillis = millis();
+    client.print("T=");
+    client.print(currentMillis);
+    client.print("\n");
+    client.print("D=");
+    client.print(currentMillis-now);
+    client.print("\n");
+
+    client.println();
+
+    return true;
+  }
+
+  // set angles
+  if (strncmp(page, "/acs/", 5) == 0) {
+    getOkHead(client);
+
+    int16_t numbers[4]; // Array to store the parsed integers
+  
+    char buffer[100];  // Make sure this is large enough to hold the string
+    strncpy(buffer, page, sizeof(buffer) - 1); // Copy string to buffer
+    buffer[sizeof(buffer) - 1] = '\0';         // Null-terminate just in case
+
+    char *numberStart = strstr(buffer, "/acs/");
+    if (numberStart != NULL) {
+      numberStart += 5;  // Move pointer to start at "123.32.50.100.150"
+      
+      // Parse each number separated by '.'
+      char *token = strtok(numberStart, ".");
+      int i = 0;
+      for (; i < 4 && token != NULL; i++) {
+        numbers[i] = atoi(token);      // Convert token to integer
+        token = strtok(NULL, ".");     // Move to the next token
+      }
+      if (i == 4) {
+        double AX1_ = ((double) numbers[0]) / 100.0;
+        double AY1_ = ((double) numbers[1]) / 100.0;
+        double AX2_ = ((double) numbers[2]) / 100.0;
+        double AY2_ = ((double) numbers[3]) / 100.0;
+
+        double AX2_moff_new = AX2_ - AX2_value_raw;
+        double AY2_moff_new = AY2_ - AY2_value_raw;
+
+        AX2_moff = AX2_moff_new;
+        AY2_moff = AY2_moff_new;
+        
+        client.print('1');
+        client.print("\n");
+
+        return true;
+      }
+    }
+
+    client.print('0');
+    client.print("\n");
+
+    return true;
+  }
+  
+  return false;
+}
+
+void eth_loop() {
+  // listen for incoming clients
+  EthernetClient client = ethServer.available();
+  if (client) {
+    //Serial.println("new client");
+    // an HTTP request ends with a blank line
+    bool currentLineIsBlank = false;
+    bool end = false;
+
+    int ethBuffPos = 0;
+    bool ethPageFound = false;
+
+    int space1pos = -1;
+    int space2pos = -1;
+
+    while (client.connected()) {
+      if (client.available()) {
+        char c = client.read();
+        //Serial.write(c);
+        // if you've gotten to the end of the line (received a newline
+        // character) and the line is blank, the HTTP request has ended,
+        // so you can send a reply
+        if (c == ' ') {
+          if (space1pos == -1)
+            space1pos = ethBuffPos;
+          else if (space2pos == -1)
+            space2pos = ethBuffPos;
+        }
+        if (c != '\r' && c != '\n')
+          ethBuff[ethBuffPos++] = c;
+        if (c == '\n' && ethBuffPos > 0) {
+          ethBuff[ethBuffPos] = '\0';
+          
+          if (!ethPageFound && space1pos > 0 && space2pos > 0) {
+            memcpy(ethTmp, ethBuff, space1pos);
+            ethTmp[space1pos] = '\0';
+            if (strcmp(ethTmp, "GET") == 0) {
+              int len = space2pos-space1pos-1;
+              memcpy(ethPage, ethBuff+space1pos+1, len);
+              ethPage[len] = '\0';
+              ethPageFound = true;
+            }
+          }
+
+          ethBuffPos = 0;
+          space1pos = -1;
+          space2pos = -1;
+        }
+        if (c == '\n' && currentLineIsBlank) {
+          end = true;
+          break;
+        }
+        if (c == '\n') {
+          // you're starting a new line
+          currentLineIsBlank = true;
+        } else if (c != '\r') {
+          // you've gotten a character on the current line
+          currentLineIsBlank = false;
+        }
+      }
+    }
+
+    if (end) {
+      bool ok = getPage(ethPage, client);
+      if (!ok) {
+        client.println("HTTP/1.1 404 not found");
+        client.println();
+        client.println();
+      }
+    }
+
+    // close the connection:
+    client.stop();
+    if (ethPageFound) {
+      //Serial.print("client finish (");
+      //Serial.print(ethPage);
+      //Serial.println(")");
+    } else {
+      //Serial.println("client finish (unknown page)");
+    }
+  }
+  udp_discover_loop();
+  udp_comm_loop();
+  if (master && dhcp_server) {
+    dhcp.handle();
+  }
+}
+
+void write_settings() {
+  Preferences pref;
+  pref.begin("main", false);
+  
+  pref.putString("localIP", localIP);
+  pref.putString("targetIP", targetIP);
+
+  pref.putFloat("batt_cof", batt_cof);
+  pref.putBool("isBattery", isBatteryConnected);
+
+  pref.putULong("crsfSpeed", crsfSpeed);
+  if (master) {
+    pref.putBool("dhcp", dhcp_server);
+  } else {
+    pref.putULong("crsf2Speed", crsf2Speed);
+  }
+
+  pref.end();
+}
+
+void handleGetParams() {
+  char macSuffix[5];
+  snprintf(macSuffix, sizeof(macSuffix), "%02X%02X", ethMac[4], ethMac[5]);
+  String mac = String(macSuffix);
+  String js = "{"
+    "\"localIP\":\""   + localIP   + "\","
+    "\"targetIP\":\""  + targetIP  + "\","
+    "\"id\":\""  + mac  + "\","
+    "\"master\":"  + (master ? "true," : "false,") +
+    "\"dhcp\":"  + ((master && dhcp_server) ? "true," : "false,") +
+    "\"crsfSpeed\":"   + String(crsfSpeed) + ","
+    "\"crsf2Speed\":"   + String(crsf2Speed) +
+  "}";
+  server.send(200, "application/json", js);
+}
+
+void handlePostParams() {
+  String lIP  = server.arg("localIP");
+  String tIP  = server.arg("targetIP");
+  String spd  = server.arg("crsfSpeed");
+
+  IPAddress ip;
+  if(!ip.fromString(lIP)) {
+    server.send(400, "text/plain", "Invalid local IP");
+    return;
+  }
+  if(!ip.fromString(tIP)) {
+    server.send(400, "text/plain", "Invalid target IP");
+    return;
+  }
+  uint32_t baud = spd.toInt();
+  if(baud == 0) {
+    server.send(400, "text/plain", "Invalid CRSF baudrate");
+    return;
+  }
+
+  if (master) {
+    dhcp_server = server.hasArg("dhcpServer") && server.arg("dhcpServer").length() > 0;
+  } else {
+    String spd2  = server.arg("crsf2Speed");
+    uint32_t baud2 = spd2.toInt();
+    if(baud2 == 0) {
+      server.send(400, "text/plain", "Invalid CRSF2 baudrate");
+      return;
+    }
+    crsf2Speed = baud2;
+  }
+
+  localIP   = lIP;
+  targetIP  = tIP;
+  crsfSpeed = baud;
+  write_settings();
+
+  server.send(200, "text/plain", "OK");
+  delay(1000);
+  ESP.restart();
+}
+
+// POST /dhcp  →  kick off DHCP request
+void handleDHCPStart() {
+  if (!dhcpRequested) {
+    // This will send the DHCPDISCOVER to your W5500
+    Ethernet.begin(ethMac);
+    dhcpRequested  = true;
+    dhcpDone       = false;
+    dhcpStartTime  = millis();
+    dhcpIP         = IPAddress(0,0,0,0);
+  }
+  server.send(200, "text/plain", "OK");
+}
+
+// GET /dhcp/status  →  report back pending / ok / error
+void handleDHCPStatus() {
+  if (!dhcpRequested) {
+    server.send(400, "text/plain", "Not started");
+    return;
+  }
+
+  // once DHCP client has a lease, Ethernet.localIP() will be non‐zero
+  if (!dhcpDone) {
+    IPAddress got = Ethernet.localIP();
+    if (got != IPAddress(0,0,0,0)) {
+      dhcpIP    = got;
+      dhcpDone  = true;
+    }
+  }
+
+  String json;
+  if (dhcpDone) {
+    json = "{\"status\":\"ok\",\"ip\":\"" + dhcpIP.toString() + "\"}";
+  }
+  else if (millis() - dhcpStartTime > 10000) {
+    // timeout after 10 s
+    json = "{\"status\":\"error\"}";
+  }
+  else {
+    json = "{\"status\":\"pending\"}";
+  }
+
+  server.send(200, "application/json", json);
+}
+
+// call when user clicks “Discover”
+void handleDiscoverStart() {
+  if (!discoverRequested) {
+    deviceCount       = 0;
+    discoverRequested = true;
+    discoverStartTime = millis();
+    UdpDisc.beginPacket("255.255.255.255", DISCOVER_PORT);
+    UdpDisc.write(0x67);
+    UdpDisc.endPacket();
+  }
+  server.send(200, "text/plain", "OK");
+}
+
+void send_v1_reply(IPAddress remoteIP) {
+  IPAddress ip = Ethernet.localIP();
+  Device dev;
+  dev.mac[0] = ethMac[0]; dev.mac[1] = ethMac[1]; dev.mac[2] = ethMac[2]; dev.mac[3] = ethMac[3]; dev.mac[4] = ethMac[4]; dev.mac[5] = ethMac[5];
+  dev.ip[0] = ip[0]; dev.ip[1] = ip[1]; dev.ip[2] = ip[2]; dev.ip[3] = ip[3];
+  dev.master = master;
+  UdpDisc.beginPacket(remoteIP, DISCOVER_PORT);
+  UdpDisc.write(0x68);
+  UdpDisc.write(reinterpret_cast<uint8_t*>(&dev), sizeof(Device));
+  UdpDisc.endPacket();
+}
+
+void send_v2_reply(IPAddress remoteIP) {
+  IPAddress ip = Ethernet.localIP();
+  Device2 dev;
+  dev.mac[0] = ethMac[0]; dev.mac[1] = ethMac[1]; dev.mac[2] = ethMac[2]; dev.mac[3] = ethMac[3]; dev.mac[4] = ethMac[4]; dev.mac[5] = ethMac[5];
+  dev.ip[0] = ip[0]; dev.ip[1] = ip[1]; dev.ip[2] = ip[2]; dev.ip[3] = ip[3];
+  dev.targetIp[0] = targetIPobj[0]; dev.targetIp[1] = targetIPobj[1]; dev.targetIp[2] = targetIPobj[2]; dev.targetIp[3] = targetIPobj[3];
+  dev.master = master;
+  dev.crsfSpeed = crsfSpeed;
+  dev.crsf2Speed = master ? 0 : crsf2Speed;
+  UdpDisc.beginPacket(remoteIP, DISCOVER_PORT);
+  UdpDisc.write(0x71);
+  UdpDisc.write(reinterpret_cast<uint8_t*>(&dev), sizeof(Device2));
+  UdpDisc.endPacket();
+}
+
+void udp_comm_loop() {
+  uint32_t now = millis();
+  uint16_t timeout = master ? 5000 : 2000;
+  if (!lanTimeout && now - lastLanEventTime > timeout) {
+    lanTimeout = true;
+    addLog("Connection with MASTER lost!", "err");
+    d.isMaster = false;
+  }
+
+  int packetSize = UdpCom.parsePacket();
+  if (packetSize == 0) return;
+  
+  char buf[64];
+  int len = UdpCom.read(buf, sizeof(buf) - 1);
+  if (len == 0) return;
+
+  if (buf[0] == 0x69) {
+
+    in_last_msg = now;
+    lastLanEventTime = now;
+    if (lanTimeout) {
+      lanTimeout = false;
+      addLog("Connection with MASTER restored!", "ok");
+      d.isMaster = true;
+    }
+    crsf_port.write(buf+1, len-1);
+    if (!master) crsf_last_msg = millis();
+  } else if (buf[0] == 0x6A) {
+    // heartbeat
+    in_last_msg = now;
+  } else if (buf[0] == 0x6B) {
+    // set TARGET IP
+    in_last_msg = now;
+    targetIPobj = UdpCom.remoteIP();
+    targetIP = targetIPobj.toString();
+    write_settings();
+    addLog("New target: " + targetIP, "ok");
+    isPair = true;
+  } else if (buf[0] == 0x6C) {
+    // set LOCAL IP + crsf_speed + crsf2_speed
+    in_last_msg = now;
+    IPAddress localIPobj = IPAddress(buf[1], buf[2], buf[3], buf[4]);
+    String oldIp = localIP;
+    localIP = localIPobj.toString();
+    uint32_t oldCrsfSpeed = crsfSpeed;
+    uint32_t oldCrsf2Speed = crsf2Speed;
+
+    uint32_t speed;
+    memcpy(&speed, &buf[5], sizeof(speed));
+    if (speed > 0) crsfSpeed = speed;
+    if (!master) {
+      memcpy(&speed, &buf[9], sizeof(speed));
+      if (speed > 0) crsf2Speed = speed;
+    }
+    write_settings();
+    if (oldIp != localIP) {
+      ethOk = eth_init();
+
+      addLog("Ethernet initiliazing... "+ ethOk, "info");
+      if (ethOk) {
+        ip_last_try = 0;
+        ip_timeout = 0;
+        ip_sent = false;
+      }
+    }
+    if (crsfSpeed != oldCrsfSpeed) {
+      crsf_port.end();
+      delay(10);
+      setup_crsf();
+    }
+    if (!master && crsf2Speed != oldCrsf2Speed) {
+      crsf2_port.end();
+      delay(10);
+      setup_crsf2();
+    }
+    addLog("New local IP: "+localIP+" CRSF: "+crsfSpeed+" CRSF2: "+crsf2Speed, "ok");
+    send_v2_reply(UdpCom.remoteIP());
+  }
+}
+
+// non-blocking UDP handler: call this every loop()
+void udp_discover_loop() {
+  int packetSize = UdpDisc.parsePacket();
+  if (packetSize == 0) return;
+
+  IPAddress remoteIP = UdpDisc.remoteIP();
+  char buf[64];
+  int len = UdpDisc.read(buf, sizeof(buf) - 1);
+  if (len == 0) return;
+  
+  // 1) If it’s a DISCOVER broadcast → reply with our MAC+master
+  if (buf[0] == 0x67) {
+    addLog("Received discover request! RemoteIp: "+remoteIP.toString(), "info");
+    send_v1_reply(remoteIP);
+    isFound = true;
+    return;
+  }
+
+  // 1) If it’s a DISCOVERv2 broadcast → reply with our MAC+master
+  if (buf[0] == 0x70) {
+    //String remoteIPstr = ;
+    addLog("Received discover request v2! RemoteIp: "+remoteIP.toString(), "info");
+    send_v2_reply(remoteIP);
+    isFound = true;
+    return;
+  }
+
+  // 2) Otherwise treat it as a discovery-reply from others
+  if (buf[0] == 0x68 && discoverRequested && millis() - discoverStartTime < 10000) {
+    Device *d = (Device *)&buf[1];
+    if (d->master != master) {
+      devices[deviceCount++] = *d;
+    }
+  }
+}
+
+// returns JSON list of replies
+void handleDiscoverResults() {
+  // close window after 10 s
+  if (discoverRequested && millis() - discoverStartTime >= 10000) {
+    discoverRequested = false;
+  }
+
+  String js = "{\"devices\":[";
+  for (int i = 0; i < deviceCount; i++) {
+    char macSuffix[5];
+    snprintf(macSuffix, sizeof(macSuffix), "%02X%02X", devices[i].mac[4], devices[i].mac[5]);
+    String mac = String(macSuffix);
+
+    char buf[16];  // max “255.255.255.255” + NUL
+    snprintf(buf, sizeof(buf), "%u.%u.%u.%u", devices[i].ip[0], devices[i].ip[1], devices[i].ip[2], devices[i].ip[3]);
+    String ipString = String(buf);
+
+    js += "{\"mac\":\"" + mac + "\","
+          "\"ip\":\""  + ipString  + "\","
+          "\"master\":" + (devices[i].master ? "true" : "false") + "}";
+    if (i < deviceCount - 1) js += ",";
+  }
+  js += "]}";
+  server.send(200, "application/json", js);
+}
+
+void setup_ap() {
+  while(!SPIFFS.begin(true)) {
+    Serial.println("SPIFFS Mount Failed!");
+    delay(1000);
+  }
+  Serial.println("SPIFFS OK");
+
+  String deviceName = String(AP_SSID);
+
+  deviceName += master ? "_M" : "_S";
+  
+  char macSuffix[5];
+  snprintf(macSuffix, sizeof(macSuffix), "%02X%02X", ethMac[4], ethMac[5]);
+  deviceName += "_";
+  deviceName += macSuffix;
+
+  WiFi.softAPConfig(AP_IP, AP_GATEWAY, AP_SUBNET);
+  WiFi.softAP(deviceName, AP_PASS);
+
+  Serial.print("AP running @ "); Serial.print(WiFi.softAPIP());
+  Serial.print(" (");
+  Serial.print(deviceName);
+  Serial.println(")");
+
+  // static files
+  server.serveStatic("/",        SPIFFS, "/index.html");
+  server.serveStatic("/style.css",SPIFFS, "/style.css");
+  server.serveStatic("/script.js",SPIFFS, "/script.js");
+
+  // params API
+  server.on("/params", HTTP_GET,  handleGetParams);
+  server.on("/params", HTTP_POST, handlePostParams);
+  server.on("/dhcp",         HTTP_POST, handleDHCPStart);
+  server.on("/dhcp/status",  HTTP_GET,  handleDHCPStatus);
+  // start discovery endpoints
+  server.on("/discover",         HTTP_POST, handleDiscoverStart);
+  server.on("/discover/results", HTTP_GET,  handleDiscoverResults);
+
+  server.onNotFound([](){
+    server.send(404, "text/plain", "404: Not Found");
+  });
+
+  server.begin();
+  Serial.println("Webserver started");
+}
+
+void setup_crsf() {
+  crsf_port.begin(crsfSpeed, SERIAL_8N1, CRSF_RX, CRSF_TX);
+  addLog("CRSF started @ " + String(crsfSpeed), "info");
+}
+
+void setup_crsf2() {
+  crsf2_port.begin(crsf2Speed, SERIAL_8N1, CRSF2_RX, CRSF2_TX);
+  addLog("CRSF2 started @ " + String(crsf2Speed), "info");
+}
+
+void batt_setup(){
+  pinMode(BATT_PIN, INPUT);
+
+  analogReadResolution(12); // 0..4095
+  analogSetPinAttenuation(BATT_PIN, ADC_11db);
+
+  // прогрів АЦП
+  analogRead(BATT_PIN);
+}
+
+void batt_loop(){
+  unsigned long now = millis();
+  if(now - batteryTime > 40){
+    uint32_t mv = analogReadMilliVolts(BATT_PIN);
+
+    batteryVoltage = (mv / 1000.0f) * 17.39f * batt_cof;
+
+    batteryTime = now;
+  }
+}
+
+void gps_setup() {
+  //GPS_SERIAL.begin(115200, SWSERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN, false);
+  GPS_SERIAL.begin(115200, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+  
+  addLog("GPS Module Test", "info");
+  delay(500);
+
+  // Check if GPS is connected
+  if (GPS_SERIAL.available()) {
+    no_gps = false;
+    addLog("GPS OK", "ok");
+    // while (GPS_SERIAL.available()) {
+    //   Serial.println(GPS_SERIAL.read(), HEX);
+    // }
+    isNoGPS = false;
+  } else {
+    isNoGPS = true;
+    addLog("GPS Not Found!", "err");
+  }
+  
+  addLog("GPS setup done.\n", "ok");
+}
+
+void gps_loop() {
+  while (GPS_SERIAL.available() > 0) {
+    int b = GPS_SERIAL.read();
+    Serial.print((char) b);
+    gps.encode(b);
+    //Serial.print((char) b, HEX);
+    long time = millis();
+    if (gps.location.isUpdated()) {
+      no_gps = false;
+      gps_lat = gps.location.lat();
+      gps_lng = gps.location.lng();
+      gps_alt = gps.altitude.meters();
+      gps_num_sat = gps.satellites.value();
+      gps_deg = gps.course.deg();
+      gps_speed = gps.speed.kmph();
+
+      #ifdef DEBUG_GPS
+      if ((gps_timer == 0) || (time - gps_timer > 1000)) {
+        Serial.print("Latitude: ");
+        Serial.println(gps_lat, 6);
+        Serial.print("Longitude: ");
+        Serial.println(gps_lng, 6);
+        Serial.print("Groundspeed: ");
+        Serial.println(gps_speed, 1);
+        Serial.print("Heading: ");
+        Serial.println(gps_deg, 2);
+        Serial.print("Altitude: ");
+        Serial.println(gps_alt);
+        Serial.print("Satellites: ");
+        Serial.println(gps_num_sat);
+        gps_timer = time;
+      }
+      #endif
+    }
+  }
+  gps_ok = (gps.satellites.value() > 0) && (gps.location.age() < GPS_OK_AGE) ? 1 : 0;
+  if(!gps_ok){
+    isNoGPSSignal = true;
+  }else{
+    isNoGPSSignal = false;
+  }
+}
+
+void bt_setup() {
+  String deviceName = "XXX_SLAVE_";
+
+  char macSuffix[9];
+  snprintf(macSuffix, sizeof(macSuffix), "%02X%02X%02X%02X", ethMac[2], ethMac[3], ethMac[4], ethMac[5]);
+  deviceName += macSuffix;
+
+  NimBLEDevice::init(deviceName.c_str());
+
+  NimBLEServer* server = NimBLEDevice::createServer();
+  server->setCallbacks(new ServerCallbacks());
+
+  NimBLEService* service = server->createService(SERVICE_UUID);
+
+  txChar = service->createCharacteristic(TX_UUID, NIMBLE_PROPERTY::NOTIFY);
+  service->createCharacteristic(RX_UUID, NIMBLE_PROPERTY::WRITE)->setCallbacks(new RxCallbacks());
+
+  service->start();
+
+  // Advertise (keep it minimal)
+  NimBLEAdvertising* adv = NimBLEDevice::getAdvertising();
+  ///adv->addServiceUUID(SERVICE_UUID);
+  //adv->setName(deviceName.c_str());
+
+  NimBLEAdvertisementData ad;
+  ad.setName(deviceName.c_str());           // put name in main adv (if fits)
+  ad.setCompleteServices(SERVICE_UUID);
+  adv->setAdvertisementData(ad);
+
+  adv->start();
+  addLog("BLE ready, advertising...", "info");
+}
+
+void setup() {
+  // pinMode(MASTER_PIN, INPUT);
+  // delay(100);
+  // if (digitalRead(MASTER_PIN)) master = true;
+
+  // #if HW_BOARD == BOARD_S3
+  //   FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
+  //   FastLED.setBrightness(BRIGHTNESS);
+  // #endif
+
+  pinMode(CONF_PIN, INPUT);
+  delay(100);
+  bool c = digitalRead(CONF_PIN);
+  if (c) {
+    delay(500);
+    c = digitalRead(CONF_PIN);
+    confMode = c;
+  }
+
+  //if (ethMac[4] == 0xFE && ethMac[5] == 0x06) {
+  //  master = false;
+    //confMode = true;
+  //}
+  
+  if (master) {
+    Serial.begin(115200);
+    read_settings();
+    Serial.println(">>> MASTER UNIT");
+  } else {
+    Serial.begin(115200);
+    gps_setup();
+    read_settings();
+    Serial.println(">>> SLAVE UNIT");
+
+    batt_setup();
+  }
+
+  d.batt_switch = isBatteryConnected;
+  d.isMaster = false;
+  d.isNRK = false;
+  
+  initValue(d);
+
+  web_setup();
+  eth_init0();
+
+  // FIXME!!!!!!!!!!!!!!
+  //confMode = false;
+
+  // if pressed during 5 more seconds - DHCP request
+  bool do_dhcp = false;
+  if (confMode) {
+    uint32_t now = millis();
+    bool pressed = true;
+    while (millis() - now < 5000) {
+      c = digitalRead(CONF_PIN);
+      if (!c) {
+        pressed = false;
+        Serial.println("unpressed");
+        break;
+      }
+      Serial.println("pressed");
+      delay(100);
+    }
+    if (pressed) do_dhcp = true;
+  }
+
+  if (do_dhcp) {
+    addLog("Doing DHCP request!", "info");
+    Ethernet.begin(ethMac);
+
+    IPAddress ipNone = IPAddress(0,0,0,0);
+    bool ipReceived = false;
+    uint32_t now = millis();
+    while (millis() - now < 10000) {
+      delay(1);
+
+      IPAddress got = Ethernet.localIP();
+      if (got != ipNone) {
+        localIP = got.toString();
+        addLog("Got DHCP IP: " + localIP, "ok");
+        stringToIPAddress(localIP+"", ethIp);
+        ipReceived = true;
+        ip_sent = false;   // start sending IP to WWW
+        write_settings();
+        break;
+      }
+    }
+
+    if (!ipReceived) addLog("Failed to get DHCP IP!", "err");
+
+    // wait 
+    confMode = false;
+  }
+
+
+
+  if (confMode) addLog("Configuration mode!", "info");
+  
+  eth_setup();
+  bt_setup();
+
+  if (confMode) {
+    setup_ap();
+  } else {
+    setup_crsf();
+    if (!master) setup_crsf2();
+  }
+  // if (!master) bno_setup();
+}
+
+uint8_t crsf_crc8(const uint8_t *ptr, uint8_t len) {
+  uint8_t crc = 0;
+  for (uint8_t i = 0; i < len; i++) {
+    crc = crsf_crc8tab[crc ^ *ptr++];
+  }
+  return crc;
+}
+
+void crsf_process_buffer() {
+  uint32_t now = millis();
+
+  switch (mtype) {
+
+    // GPS
+    case CRSF_FRAMETYPE_GPS:
+      d.isNRK = true;
+      isNRKTime = now;
+      break;
+
+    // Battery
+    case CRSF_FRAMETYPE_BATTERY_SENSOR:
+      if(isBatteryConnected){
+        uint16_t v = batteryVoltage * 10.0f;
+
+        inBuffer[3] = (v >> 8) & 0xFF;
+        inBuffer[4] = v & 0xFF;
+
+        inBuffer[bufferIndex - 1] = crsf_crc8(&inBuffer[2], inBuffer[1] - 1);
+      }
+      d.isNRK = true;
+      isNRKTime = now;
+      break;
+
+    // RC channels from master
+    case CRSF_FRAMETYPE_RC_CHANNELS_PACKED:
+      d.isNRK = true;
+      isNRKTime = now;
+      break;
+
+    default:
+      if(now - isNRKTime > 1000){
+        d.isNRK = false;
+      }
+    break;
+  }
+
+  if (master) crsf_last_msg = now;
+  
+  if (master || (!master && in_last_msg > 0)) {
+    // відправляємо дані в лан якщо мастер-юніт або якщо слейв і отримано пакет від мастера.
+    // якщо слейв спробує відправити пакет, коли мастер не був в мережі - будуть лаги
+    UdpCom.beginPacket(targetIPobj, COMM_PORT);
+    UdpCom.write(0x79);
+    UdpCom.write(ethMac+2, 4);
+    UdpCom.write(inBuffer, bufferIndex);
+    UdpCom.endPacket();
+    out_last_msg = now;
+  }
+
+  if (!master) {
+    crsf2_port.write(inBuffer, bufferIndex);
+  }
+  
+  /*
+  if (addr == CRSF_ADDRESS_FLIGHT_CONTROLLER) {
+    if (mtype == CRSF_FRAMETYPE_LINK_STATISTICS) {
+      return;
+    }
+    if (mtype == CRSF_FRAMETYPE_RC_CHANNELS_PACKED) {
+      return;
+    }
+  }*/
+  
+  /*
+  Serial.print("FROM ");
+  Serial.print(addr, HEX);
+  Serial.print(" MSG ");
+  Serial.println(mtype, HEX);
+  */
+}
+
+void crsf_reset() {
+  bufferIndex = 0;
+  addr = 0;
+  len = 0;
+  mtype = 0;
+  crc = 0;
+  sync_ = false;
+}
+
+void loop_crsf() {
+  if (!crsf_port.available()) {
+    return;
+  }
+
+  uint8_t b = crsf_port.read();
+  //Serial.println(b, HEX);
+  
+  if (!sync_) {
+    if (b != CRSF_ADDRESS_BROADCAST && b != CRSF_ADDRESS_USB && b != CRSF_ADDRESS_TBS_CORE_PNP_PRO && b != CRSF_ADDRESS_RESERVED1 && b != CRSF_ADDRESS_CURRENT_SENSOR && b != CRSF_ADDRESS_GPS && b != CRSF_ADDRESS_TBS_BLACKBOX && b != CRSF_ADDRESS_FLIGHT_CONTROLLER && b != CRSF_ADDRESS_RESERVED2 && b != CRSF_ADDRESS_RACE_TAG && b != CRSF_ADDRESS_RADIO_TRANSMITTER && b != CRSF_ADDRESS_CRSF_RECEIVER && b != CRSF_ADDRESS_CRSF_TRANSMITTER) {
+      return;
+    }
+    sync_ = true;
+    bufferIndex = 0;
+  }
+  
+  bool crc_ = false;
+  if (bufferIndex == 0) {
+    addr = b;
+  } else if (bufferIndex == 1) {
+    len = b;
+    if (len < 3 || len > CRSF_MAX_PACKET_LEN) {
+      crsf_reset();
+      return;
+    }
+  } else if (bufferIndex == 2) {
+    mtype = b;
+  } else if (bufferIndex > 2 && bufferIndex == len+1) {
+    crc = b;
+    crc_ = true;
+  }
+
+  inBuffer[bufferIndex++] = b;
+  if (bufferIndex >= CRSF_MAX_PACKET_LEN + 4) { // error?
+    crsf_reset();
+    return;
+  }
+
+  if (crc_) {
+    uint8_t ncrc = crsf_crc8(&inBuffer[2], inBuffer[1] - 1);
+    if (ncrc == crc) {
+      crsf_process_buffer();
+    } else {
+      Serial.print("CRC ERROR ADDR=");
+      Serial.print(addr, HEX);
+      Serial.print(" MSG=");
+      Serial.print(mtype, HEX);
+      Serial.print("    CRC=");
+      Serial.print(crc, HEX);
+      Serial.print(" NCRC=");
+      Serial.println(ncrc, HEX);
+    }
+    crsf_reset();
+  }
+}
+
+// CRSF2
+void crsf2_process_buffer() {
+  crsf2_last_msg = millis();
+  if (lanTimeout) {
+    crsf_port.write(inBuffer2, bufferIndex2);
+  }
+  /*if (addr2 == CRSF_ADDRESS_FLIGHT_CONTROLLER) {
+    if (mtype == CRSF_FRAMETYPE_LINK_STATISTICS) {
+      return;
+    }
+    if (mtype == CRSF_FRAMETYPE_RC_CHANNELS_PACKED) {
+      return;
+    }
+  }*/
+  
+  /*
+  Serial.print("FROM2 ");
+  Serial.print(addr2, HEX);
+  Serial.print(" MSG ");
+  Serial.println(mtype2, HEX);
+  */
+}
+
+void crsf2_reset() {
+  bufferIndex2 = 0;
+  addr2 = 0;
+  len2 = 0;
+  mtype2 = 0;
+  crc2 = 0;
+  sync2_ = false;
+}
+
+void loop_crsf2() {
+  if (!crsf2_port.available()) return;
+
+  uint8_t b = crsf2_port.read();
+  
+  if (!sync2_) {
+    if (b != CRSF_ADDRESS_BROADCAST && b != CRSF_ADDRESS_USB && b != CRSF_ADDRESS_TBS_CORE_PNP_PRO && b != CRSF_ADDRESS_RESERVED1 && b != CRSF_ADDRESS_CURRENT_SENSOR && b != CRSF_ADDRESS_GPS && b != CRSF_ADDRESS_TBS_BLACKBOX && b != CRSF_ADDRESS_FLIGHT_CONTROLLER && b != CRSF_ADDRESS_RESERVED2 && b != CRSF_ADDRESS_RACE_TAG && b != CRSF_ADDRESS_RADIO_TRANSMITTER && b != CRSF_ADDRESS_CRSF_RECEIVER && b != CRSF_ADDRESS_CRSF_TRANSMITTER) {
+      return;
+    }
+    sync2_ = true;
+    bufferIndex2 = 0;
+  }
+  
+  bool crc_ = false;
+  if (bufferIndex2 == 0) {
+    addr2 = b;
+  } else if (bufferIndex2 == 1) {
+    len2 = b;
+    if (len2 < 3 || len2 > CRSF_MAX_PACKET_LEN) {
+      crsf2_reset();
+      return;
+    }
+  } else if (bufferIndex2 == 2) {
+    mtype2 = b;
+  } else if (bufferIndex2 > 2 && bufferIndex2 == len2+1) {
+    crc2 = b;
+    crc_ = true;
+  }
+
+  inBuffer2[bufferIndex2++] = b;
+  if (bufferIndex2 >= CRSF_MAX_PACKET_LEN + 4) { // error?
+    crsf2_reset();
+    return;
+  }
+
+  if (crc_) {
+    uint8_t ncrc = crsf_crc8(&inBuffer2[2], inBuffer2[1] - 1);
+    if (ncrc == crc2) {
+      crsf2_process_buffer();
+    } else {
+      Serial.print("CRC2 ERROR ADDR=");
+      Serial.print(addr2, HEX);
+      Serial.print(" MSG=");
+      Serial.print(mtype2, HEX);
+      Serial.print("    CRC=");
+      Serial.print(crc2, HEX);
+      Serial.print(" NCRC=");
+      Serial.println(ncrc, HEX);
+    }
+    crsf2_reset();
+  }
+}
+// ----- BNO
+float add_angles(float angle1, float angle2, float angle3) {
+  // Add the angles
+  float sum = angle1 + angle2 + angle3;
+
+  // Normalize the result to the range -180 to +180 degrees
+  while (sum > 180.0) sum -= 360.0;
+  while (sum < -180.0) sum += 360.0;
+
+  return sum;
+}
+
+float add_angles(float angle1, float angle2) {
+  // Add the angles
+  float sum = angle1 + angle2;
+
+  // Normalize the result to the range -180 to +180 degrees
+  while (sum > 180.0) sum -= 360.0;
+  while (sum < -180.0) sum += 360.0;
+
+  return sum;
+}
+
+// Function to compute the median of an array
+float computeMedian(float *values, int size) {
+  float sorted[size];
+  memcpy(sorted, values, size * sizeof(float));  // Copy values to a temporary array
+  for (int i = 0; i < size - 1; i++) {
+    for (int j = i + 1; j < size; j++) {
+      if (sorted[i] > sorted[j]) {
+        float temp = sorted[i];
+        sorted[i] = sorted[j];
+        sorted[j] = temp;
+      }
+    }
+  }
+  // Return the middle value
+  if (size % 2 == 0) {
+    return (sorted[size / 2 - 1] + sorted[size / 2]) / 2.0;
+  } else {
+    return sorted[size / 2];
+  }
+}
+
+// void setup_bno_reports() {
+//   if (bno.enableGameRotationVector() == true) {
+//     Serial.println("BNO Game Rotation vector enabled");
+//   } else {
+//     Serial.println("BNO Could not enable game rotation vector");
+//   }
+// }
+
+// void bno_setup() {
+// #if HW_BOARD == BOARD_S3
+//   Wire.begin(I2C_SDA, I2C_SCL);
+// #else
+//   Wire.begin();
+// #endif
+//   uint32_t bno_timeout = millis() + 3000;
+//   bno_ok = false;
+//   while (millis() < bno_timeout && !bno_ok) {
+//     bno_ok = bno.begin(BNO08X_2_ADDR, Wire);
+//     if (bno_ok) break;
+//     Serial.println("BNO08x 2 not detected at default I2C address. Retry in 300ms");
+//     delay(300);
+//   }
+//   if (bno_ok) {
+//     Serial.println("BNO08x OK");
+//     setup_bno_reports();
+//   }
+//   else Serial.println("BNO08x Error");
+  
+//   Serial.println("BNO08x setup done");
+// }
+
+// void bno_loop() {
+//   if (bno.wasReset()) {
+//     Serial.print("BNO sensor was reset ");
+//     setup_bno_reports();
+//     AZ2_off = add_angles(AZ2_value_raw, AZ2_off);
+//   }
+
+//   // check BNO every 10millis
+//   uint32_t now = millis();
+//   if (now - lastBnoQTime < 10) return;
+//   lastBnoQTime = now;
+
+//   while (bno.getSensorEvent()) {
+//     // is the event a report of the game rotation vector?
+//     if (bno.getSensorEventID() == SENSOR_REPORTID_GAME_ROTATION_VECTOR) {
+//       float heading = (bno.getYaw()) * 180.0 / PI;
+//       float roll = (bno.getRoll()) * 180.0 / PI; // Convert roll to degrees
+//       float pitch = (bno.getPitch()) * 180.0 / PI; // Convert pitch to degrees
+
+//       if (currentReadingInit < WINDOW_SIZE) {
+//         xReadings[currentReadingInit] = roll;
+//         yReadings[currentReadingInit] = pitch;
+//         currentReadingInit++;
+//       } else {
+//         xReadings[currentReadingIndex] = roll;
+//         yReadings[currentReadingIndex] = pitch;
+
+//         // Compute the median for X and Y
+//         float xMedian = computeMedian(xReadings, WINDOW_SIZE);
+//         float yMedian = computeMedian(yReadings, WINDOW_SIZE);
+
+//         // Apply the low-pass filter
+//         roll = ALPHA * xMedian + (1 - ALPHA) * (-AY2_value_raw);
+//         pitch = ALPHA * yMedian + (1 - ALPHA) * (-AX2_value_raw);
+
+//         // Update the sliding window index
+//         currentReadingIndex = (currentReadingIndex + 1) % WINDOW_SIZE;
+//       }
+
+//       AX2_value_raw = -pitch;
+//       AX2_value = add_angles(AX2_value_raw, AX2_moff);
+//       AY2_value_raw = -roll;
+//       AY2_value = add_angles(AY2_value_raw, AY2_moff);
+      
+//       AZ2_value_raw = -heading;
+//       AZ2_value = add_angles(AZ2_value_raw, AZ2_moff, AZ2_off);
+
+//       uint32_t now = millis();
+//       if (now - lastBnoPrintTime >= 500) {
+//         lastBnoPrintTime = now;
+//         Serial.print("BNO |  X:  ");
+//         Serial.print(AX2_value, 2);
+
+//         Serial.print("  Y:  ");
+//         Serial.print(AY2_value, 2);
+
+//         Serial.print("  Z:  ");
+//         Serial.print(AZ2_value, 3);
+
+//         Serial.println();
+//       }
+//     }
+//   }
+// }
+// -----
+
+void crsf_state_loop() {
+  uint32_t now = millis();
+
+  crsf1_fail = now - crsf_last_msg > 1000;
+  crsf2_fail = now - crsf2_last_msg > 1000;
+
+  crsf_fail = crsf1_fail;
+  if (!master && crsf_fail) crsf_fail = crsf2_fail;
+}
+
+void send_heartbeat() {
+  UdpCom.beginPacket(targetIPobj, COMM_PORT);
+  UdpCom.write(0x6A);
+  UdpCom.write(ethMac+2, 4);
+  UdpCom.endPacket();
+}
+
+void loop_ip_www() {
+  if (ip_sent) return;
+  uint32_t now = millis();
+  uint32_t msg_delay = now - ip_last_try;
+  if (ip_timeout == 0) {
+    ip_timeout = now + IP_DURATION_MIN*60000;
+  }
+  if (now >= ip_timeout) {
+    addLog("TIMEOUT SENDING MAC+IP", "warn");
+    ip_sent = true;
+    return;
+  }
+
+  if (msg_delay >= IP_DELAY_MS) {
+    bool ok = sendMacAndIpToServer(WWW_IP, 8080, "/store");
+    // addLog(ok ? "MAC+IP SENT" : "ERROR SENDING MAC+IP", "info");
+    if (ok) {
+      ip_sent = true;
+    }
+    ip_last_try = now;
+  }
+}
+
+void loop_heartbeat() {
+  uint32_t now = millis();
+  uint32_t msg_delay = now - out_last_hb;
+  if (msg_delay >= 2000) {
+    if (master) {
+      send_heartbeat();
+      out_last_hb = now;
+      out_last_msg = now;
+    } else {
+      if (in_last_msg > 0) {
+        send_heartbeat();
+        out_last_hb = now;
+        out_last_msg = now;
+      }
+    }
+  }
+}
+
+void crsfQueuePacket(uint8_t addr, uint8_t type, const void *payload, uint8_t len) {
+  if (len > CRSF_MAX_PACKET_LEN)
+    return;
+  
+  uint32_t now = millis();
+
+  uint8_t buf[CRSF_MAX_PACKET_LEN+4];
+  buf[0] = addr;
+  buf[1] = len + 2; // type + payload + crc
+  buf[2] = type;
+  memcpy(&buf[3], payload, len);
+  //buf[len+3] = _crc.calc(&buf[2], len + 1);
+  buf[len+3] = crsf_crc8(&buf[2], len + 1);
+  
+  //crsf1.write(buf, len + 4);
+  if (!master && in_last_msg > 0) {
+    // відправляємо дані в лан якщо мастер-юніт або якщо слейв і отримано пакет від мастера.
+    // якщо слейв спробує відправити пакет, коли мастер не був в мережі - будуть лаги
+    UdpCom.beginPacket(targetIPobj, COMM_PORT);
+    UdpCom.write(0x79);
+    UdpCom.write(ethMac+2, 4);
+    UdpCom.write(buf, len + 4);
+    UdpCom.endPacket();
+    out_last_msg = now;
+  }
+}
+
+uint32_t lastGpsTime;
+void gps_telemetry_loop() {
+  if (!gps_ok) return;
+
+  // send GPS every 1sec
+  uint32_t now = millis();
+  if (now - lastGpsTime < 1000) return;
+  lastGpsTime = now;
+  
+  crsf_sensor_gps_t gps = { 0 };
+
+  gps.latitude = htobe32((int32_t)(gps_lat*10000000.0));
+  gps.longitude = htobe32((int32_t)(gps_lng*10000000.0));
+  gps.heading = htobe16((uint16_t)(gps_deg*100.0));
+  gps.groundspeed = htobe16((uint16_t)(gps_speed*10.0));
+  gps.altitude = htobe16((uint16_t)(gps_alt+1000.0));
+  gps.satellites = (uint8_t)gps_num_sat;
+
+  crsfQueuePacket(CRSF_SYNC_BYTE, CRSF_FRAMETYPE_GPS, &gps, sizeof(gps));
+}
+
+// CRGB lastLedColor = CRGB::Black;
+
+// void setLed(CRGB color) {
+//   if (leds[0] == color) return;
+
+//   leds[0] = color;
+//   FastLED.show();
+// }
+
+// void ledDebug(){
+//   setLed(CRGB::Black);
+//   unsigned long now = millis();
+//   if(now - ledBlinkTime < 200){
+//     if(now - ledTime < 1000){
+//       if(isNoEthernet){
+//         setLed(CRGB::Red);
+//       }else{
+//         ledTime = ledTime - 1000;
+//       }
+//     }else if(now - ledTime < 2000){
+//       if(isFound){
+//         setLed(CRGB::Yellow);
+//       }else{
+//         ledTime = ledTime - 1000;
+//       }
+//     }else if(now - ledTime < 3000){
+//       if(isPair){
+//         setLed(CRGB::Green);
+//       }else{
+//         ledTime = ledTime - 1000;
+//       }
+//     }else if(now - ledTime < 4000){
+//       if(isNoIP){
+//         setLed(CRGB::DeepPink);
+//       }else{
+//         ledTime = ledTime - 1000;
+//       }
+//     }else if(now - ledTime < 5000){
+//       if(isNoGPS){
+//         setLed(CRGB::Blue);
+//       }else if(isNoGPSSignal){
+//         setLed(CRGB::Violet);
+//       }else{
+//         ledTime = now;
+//       }
+//     }else{
+//       ledTime = now;
+//     }
+//   }else if(now - ledBlinkTime < 400){
+//     setLed(CRGB::Black);
+//   }else{
+//     ledBlinkTime = now;
+//   }
+// }
+
+void loop() {
+  eth_loop();
+  web_loop();
+  if (confMode) {
+    server.handleClient();
+  } else {
+    loop_crsf();
+    if (!master) loop_crsf2();
+    loop_heartbeat();
+    loop_ip_www();
+  }
+  // if (bno_ok) bno_loop();
+  if (!no_gps) {
+    gps_loop();
+    gps_telemetry_loop();
+  }
+  crsf_state_loop();
+
+
+  #if HW_BOARD == BOARD_S3
+    // ledDebug();
+
+    batt_loop();
+
+    s = getWebValue();
+    bool do_dhcp = false;
+
+    if(digitalRead(CONF_PIN) || s.dhcpSwitch){
+      do_dhcp = true;
+      s.dhcpSwitch = false;
+    }
+    if (do_dhcp) {
+      addLog("Doing DHCP request!", "info");
+      Ethernet.begin(ethMac);
+
+      IPAddress ipNone = IPAddress(0,0,0,0);
+      bool ipReceived = false;
+      uint32_t now = millis();
+      while (millis() - now < 10000) {
+        delay(1);
+
+        IPAddress got = Ethernet.localIP();
+        if (got != ipNone) {
+          localIP = got.toString();
+          addLog("Got DHCP IP: " + localIP, "ok");
+          stringToIPAddress(localIP+"", ethIp);
+          ipReceived = true;
+          ip_sent = false;   // start sending IP to WWW
+          write_settings();
+          ethOk = eth_init();
+
+          addLog("Ethernet initiliazing... "+ ethOk, "info");
+          s.ipAddress = localIP;
+          break;
+        }
+      }
+
+      if (!ipReceived) addLog("Failed to get DHCP IP!", "err");
+
+      // wait 
+      confMode = false;
+    }
+    
+    
+    if(s.ipAddress != localIP && s.ipAddress != ""){
+      localIP = s.ipAddress;
+      addLog("New local IP: " + localIP, "ok");
+      stringToIPAddress(localIP+"", ethIp);
+      ip_sent = false;   // start sending IP to WWW
+      write_settings();
+      ethOk = eth_init();
+
+      addLog("Ethernet initiliazing... " + ethOk, "info");
+    }
+    if(s.batt_switch != isBatteryConnected){
+      isBatteryConnected = s.batt_switch;
+      d.batt_switch = isBatteryConnected;
+      
+      write_settings();
+      if(isBatteryConnected){
+        addLog("Battery mode - ON", "info");
+      }else{
+        addLog("Battery mode - OFF", "info");
+      }
+    }
+
+    if(isBatteryConnected){
+      if((int)s.real_batt != (int)batteryVoltage && s.real_batt != 0.0f){
+        batt_cof = s.real_batt * batt_cof / batteryVoltage;
+        write_settings();
+        addLog("Battery calibrated - " + String(s.real_batt), "ok");
+      }
+    }
+    //Serial.println(isBatteryConnected);
+
+    d.ipAddress = localIP;
+    d.battEsp = String(batteryVoltage, 2);
+    initValue(d);
+  #endif
+}
