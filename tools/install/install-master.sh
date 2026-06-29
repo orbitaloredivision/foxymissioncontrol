@@ -12,8 +12,8 @@
 set -euo pipefail
 
 REPO_RAW="${REPO_RAW:-https://raw.githubusercontent.com/orbitaloredivision/foxymissioncontrol/main}"
+CODE_ZIP_URL="${REPO_RAW}/shared/code.zip"
 
-LFTP_PASSWORD='pIKEKdmphsEhLowtaER5FJXjvx/7LvRV'
 WDIR='/home/orangepi/code'
 TMP_FNAME='/tmp/code.zip'
 
@@ -27,20 +27,16 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 echo "Update starts..."
-if command -v sshpass >/dev/null; then
-  echo "sshpass already installed"
-else
-  echo "Installing sshpass"
-  apt update
-  apt install -y sshpass
-fi
 
 if [ -f "$TMP_FNAME" ]; then
   rm "$TMP_FNAME"
 fi
 
-sshpass -p "$LFTP_PASSWORD" sftp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null sftp_read@185.233.117.8:/shared/code.zip "$TMP_FNAME"
-if [ $? -ne 0 ]; then
+echo "Downloading code.zip from repository..."
+echo "  ${CODE_ZIP_URL}"
+curl -fsSL "${CODE_ZIP_URL}?$(date +%s)" -o "$TMP_FNAME"
+if [ ! -s "$TMP_FNAME" ]; then
+  echo "ERROR: code.zip download failed or empty"
   exit 1
 fi
 
@@ -53,7 +49,9 @@ if [ ! -f "$SKIP_SIG_FILE" ]; then
     unzip -o "$TMP_FNAME" -d "$WDIR"
     cd "$WDIR"
     find . -type f \( -name "*.sh" -o -name "*.py" \) -exec sed -i 's/\r$//' {} +
-    chmod +x *.sh && chmod +x *.py
+    shopt -s nullglob
+    chmod +x *.sh *.py 2>/dev/null || true
+    shopt -u nullglob
     chown -R orangepi:orangepi "$WDIR"
 
     if [ ! -f "$SIG_FILE" ]; then
@@ -91,6 +89,11 @@ if [ $code -eq 0 ]; then
   ./setup-upgrade-wrapper.sh
   echo "--- update-nginx-upgrade-timeout.sh ---"
   ./update-nginx-upgrade-timeout.sh
+fi
+
+if [ "$code" -ne 0 ]; then
+  echo "ERROR: install-guidashboard.sh failed (exit $code)"
+  exit "$code"
 fi
 
 echo "COMPLETE!"
