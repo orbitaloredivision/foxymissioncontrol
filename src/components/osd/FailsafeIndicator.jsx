@@ -6,8 +6,8 @@ import { useTranslation } from 'react-i18next'
 
 export function getFailsafeMode(fs) {
   const value = Number(fs)
-  if (value === 1) return 'forward'
-  if (value === 2) return 'backward'
+  if (value === 1) return 'backward'
+  if (value === 2) return 'forward'
   if (value === 3) return 'stop'
   return 'unknown'
 }
