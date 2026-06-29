@@ -24,6 +24,12 @@ docs/
 # Master Orange Pi install bundle (local only)
 master/
 
+# Arduino firmware reference (local only)
+arduinocode/
+
+# Local deploy scripts (local only)
+deploychanges/
+
 # GitHub token (secrets)
 .github-token
 
