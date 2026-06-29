@@ -21,6 +21,9 @@ server/drone-profiles.json
 # Documentation (local only)
 docs/
 
+# Master Orange Pi install bundle (local only)
+master/
+
 # GitHub token (secrets)
 .github-token
 
