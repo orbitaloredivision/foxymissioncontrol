@@ -64,6 +64,7 @@
     "distanceUnit": "м",
     "warning": "УВАГА",
     "armed": "ГОТОВИЙ ДО ПІДРИВУ",
+    "selfDestroy": "САМОЗНИЩЕННЯ",
     "mapError": "Помилка карти",
     "checkApiKey": "Перевірте API ключ",
     "loadingMap": "Завантаження карти...",
@@ -77,6 +78,15 @@
     "showCompass": "Показати компас",
     "hideSatellites": "Сховати супутники",
     "showSatellites": "Показати супутники"
+  },
+
+  "failsafe": {
+    "title": "FAIL / SAFE",
+    "forward": "ПРОКАТ",
+    "backward": "ВІДКАТ",
+    "stop": "СТОП",
+    "unknown": "НЕВІДОМО",
+    "na": "N/A"
   },
   
   "telemetry": {

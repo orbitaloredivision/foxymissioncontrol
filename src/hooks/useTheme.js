@@ -70,6 +70,7 @@ export function useTheme(telemetryData = null, droneType = null) {
   // Extract fuse states for stable dependency tracking
   const f1 = telemetryData?.f1
   const f2 = telemetryData?.f2
+  const sd = telemetryData?.sd
   const battV = telemetryData?.batt_v
   
   // Check telemetry conditions for automatic theme switching
@@ -78,7 +79,7 @@ export function useTheme(telemetryData = null, droneType = null) {
 
     const conditions = config.themeConditions
     let matchedTheme = null
-    const conditionContext = { f1, f2, batt_v: battV, droneType }
+    const conditionContext = { f1, f2, sd, batt_v: battV, droneType }
     
     // Check all conditions - first match wins
     for (const [, conditionConfig] of Object.entries(conditions)) {
@@ -97,7 +98,7 @@ export function useTheme(telemetryData = null, droneType = null) {
     if (currentTheme !== targetTheme) {
       loadTheme(targetTheme)
     }
-  }, [f1, f2, battV, droneType, currentTheme, loadTheme])
+  }, [f1, f2, sd, battV, droneType, currentTheme, loadTheme])
 
   return {
     currentTheme,

@@ -13,7 +13,6 @@ export function HudTopBar({
   telemetry, 
   isActive, 
   onShareClick,
-  showFailsafe = true,
   showFlightMode = false,
   showStatusMode = true
 }) {
@@ -45,11 +44,6 @@ export function HudTopBar({
 
       <div className="hud-right-indicators">
         <CameraFitButton />
-        {showFailsafe && (
-          <span className={`status-fs ${telemetry.fs > 0 ? 'active' : ''}`}>
-            FAILSAFE:{telemetry.fs || 0}
-          </span>
-        )}
         {showFlightMode && (
           <span className="status-fs flight-mode">
             MODE:{flightMode}

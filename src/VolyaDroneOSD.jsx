@@ -47,6 +47,8 @@ export default function VolyaDroneOSD({
           <RearMirror
             rearCameraUrl={rearCameraUrl}
             heading={telemetry.heading}
+            showWarning={telemetry.f1 && telemetry.f2}
+            selfDestroy={telemetry.sd === true}
             droneId={droneId}
           />
         </div>
@@ -57,6 +59,8 @@ export default function VolyaDroneOSD({
           droneName={droneName}
           droneType={droneType}
           satellites={telemetry.satellites}
+          fs={telemetry.fs}
+          vt={telemetry.vt}
           hasHdStream={hasHdStream}
           hdMode={hdMode}
           onHdToggle={onHdToggle}

@@ -25,7 +25,6 @@ export function VolyaHudTopBar({ telemetry, isActive, onShareClick }) {
       telemetry={telemetry}
       isActive={isActive}
       onShareClick={onShareClick}
-      showFailsafe={false}
       showFlightMode={false}
       showStatusMode={true}
     />
@@ -38,6 +37,8 @@ export function VolyaHudLeftPanel({
   droneName,
   droneType,
   satellites,
+  fs = 0,
+  vt,
   hasHdStream,
   hdMode,
   onHdToggle,
@@ -55,6 +56,8 @@ export function VolyaHudLeftPanel({
       droneName={droneName}
       droneType={droneType}
       satellites={satellites}
+      fs={fs}
+      vt={vt}
       hasHdStream={hasHdStream}
       hdMode={hdMode}
       onHdToggle={onHdToggle}

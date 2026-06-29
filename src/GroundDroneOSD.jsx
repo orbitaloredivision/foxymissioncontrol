@@ -15,6 +15,7 @@ import {
   PowerIndicator,
   MapPanel,
   HeadingTape,
+  WarningBanner,
   TelemetryStrip,
   ControlIcon,
   Crosshair,
@@ -61,7 +62,6 @@ export default function GroundDroneOSD({
           telemetry={telemetry}
           isActive={isActive}
           onShareClick={onShareClick}
-          showFailsafe={true}
         />
 
         {/* Fuse Switches, Mirror & Heading Tape - hidden for UGV */}
@@ -72,6 +72,7 @@ export default function GroundDroneOSD({
               rearCameraUrl={rearCameraUrl}
               heading={telemetry.heading}
               showWarning={telemetry.f1 && telemetry.f2}
+              selfDestroy={telemetry.sd === true}
               droneId={droneId}
             />
             <FuseSwitch label="F2" armed={telemetry.f2} />
@@ -81,7 +82,11 @@ export default function GroundDroneOSD({
         {/* UGV: heading tape rendered separately (no mirror section) */}
         {isUgv && (
           <div className="hud-heading-tape">
-            <HeadingTape heading={telemetry.heading} />
+            {telemetry.sd === true ? (
+              <WarningBanner variant="selfDestroy" />
+            ) : (
+              <HeadingTape heading={telemetry.heading} />
+            )}
           </div>
         )}
 
@@ -92,6 +97,8 @@ export default function GroundDroneOSD({
           droneName={droneName}
           droneType={droneType}
           satellites={telemetry.satellites}
+          fs={telemetry.fs}
+          vt={telemetry.vt}
           hasHdStream={hasHdStream}
           hdMode={hdMode}
           onHdToggle={onHdToggle}

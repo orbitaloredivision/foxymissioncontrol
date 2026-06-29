@@ -62,6 +62,7 @@
     "distanceUnit": "m",
     "warning": "WARNING",
     "armed": "ARMED",
+    "selfDestroy": "SELF DESTROY",
     "mapError": "Map Error",
     "checkApiKey": "Check API Key",
     "loadingMap": "Loading Map...",
@@ -75,6 +76,15 @@
     "showCompass": "Show compass",
     "hideSatellites": "Hide satellites",
     "showSatellites": "Show satellites"
+  },
+
+  "failsafe": {
+    "title": "FAIL / SAFE",
+    "forward": "FORWARD",
+    "backward": "BACKWARD",
+    "stop": "STOP",
+    "unknown": "UNKNOWN",
+    "na": "N/A"
   },
   
   "telemetry": {

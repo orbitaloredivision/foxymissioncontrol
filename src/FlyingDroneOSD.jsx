@@ -94,7 +94,6 @@ export default function FlyingDroneOSD({
           telemetry={telemetry}
           isActive={isActive}
           onShareClick={onShareClick}
-          showFailsafe={false}
           showFlightMode={true}
           showStatusMode={false}
         />

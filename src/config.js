@@ -47,6 +47,11 @@ export const config = {
   // Theme will auto-switch when telemetry data matches conditions
   // Conditions are checked in order - first match wins
   themeConditions: {
+    // Switch to aggressive-red when self-destruct is active
+    selfDestroy: {
+      theme: 'aggressive-red',
+      condition: (ctx) => ctx?.sd === true,
+    },
     // Switch to aggressive-red when both fuses are armed (Foxy only - UGV has no fuses)
     fusesArmed: {
       theme: 'aggressive-red',

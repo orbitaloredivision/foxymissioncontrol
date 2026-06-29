@@ -1028,6 +1028,12 @@ body {
   margin-top: 4px;
 }
 
+.warning-subtext--self-destroy {
+  font-size: 1.4rem;
+  letter-spacing: 2px;
+  line-height: 1.1;
+}
+
 /* ========== HEADING TAPE LAYOUT ========== */
 .hud-heading-tape {
   position: absolute;
@@ -1334,6 +1340,74 @@ body {
   font-size: 0.55rem;
   letter-spacing: 1px;
   margin-top: 2px;
+}
+
+/* Failsafe Indicator (under satellites) */
+.hud-failsafe {
+  position: relative;
+  width: 120px;
+  margin-top: 8px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.failsafe-header {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-align: center;
+  padding: 6px 8px;
+  line-height: 1.2;
+}
+
+.failsafe-status {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 10px 8px 14px;
+  border-top-width: 1px;
+  border-top-style: solid;
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    10px 100%,
+    0 calc(100% - 10px)
+  );
+}
+
+.failsafe-value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.failsafe-divider {
+  width: 55%;
+  height: 0;
+  border: none;
+  border-top: 1px solid var(--theme-hud-border, rgba(255, 255, 255, 0.25));
+  margin: 7px 0 5px;
+  opacity: 0.85;
+}
+
+.failsafe-vt-value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-align: center;
+  line-height: 1.1;
 }
 
 /* Quality Switch (SD/HD) */
@@ -3060,6 +3134,11 @@ body {
     font-size: 0.65rem;
     letter-spacing: 2px;
   }
+
+  .warning-subtext--self-destroy {
+    font-size: 1.3rem;
+    letter-spacing: 1px;
+  }
   
   .hud-overlay--ugv .hud-heading-tape {
     top: 55px;
@@ -3130,6 +3209,11 @@ body {
 
   .warning-subtext {
     font-size: 0.55rem;
+    letter-spacing: 1px;
+  }
+
+  .warning-subtext--self-destroy {
+    font-size: 1.1rem;
     letter-spacing: 1px;
   }
 

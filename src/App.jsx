@@ -57,6 +57,8 @@ const createInitialState = () => ({
   moving: false,
   brake_assist: false,
   fs: 0,
+  vt: undefined,
+  sd: false,
   f1: false,
   f2: false,
   md: 0,
@@ -126,9 +128,9 @@ function App() {
   const [activating, setActivating] = useState(false) // Progress bar phase
   const [skipPasswordForm, setSkipPasswordForm] = useState(false) // Skip password if already authenticated
   
-  // Theme management - reacts to telemetry data (droneType used to skip fusesArmed for UGV)
+  // Theme management - reacts to merged telemetry (droneType used to skip fusesArmed for UGV)
   const droneTypeForTheme = droneProfile?.droneType || DRONE_TYPES.FOXY
-  const { currentTheme } = useTheme(latestTelemetryData, droneTypeForTheme)
+  const { currentTheme } = useTheme(telemetry, droneTypeForTheme)
   
   // Poll active status for this drone
   // Active control is EXCLUSIVE: only one drone can be active at a time
@@ -369,6 +371,8 @@ function App() {
         updated.brake_assist = data.brake_assist ?? prev.brake_assist
         updated.mode = data.mode ?? prev.mode
         updated.fs = data.fs ?? prev.fs
+        updated.vt = data.vt ?? prev.vt
+        updated.sd = data.sd ?? prev.sd
         updated.f1 = data.f1 ?? prev.f1
         updated.f2 = data.f2 ?? prev.f2
         updated.md = data.md ?? prev.md

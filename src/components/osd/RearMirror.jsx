@@ -18,6 +18,7 @@ export function RearMirror({
   rearCameraUrl,
   heading,
   showWarning = false,
+  selfDestroy = false,
   droneId = null,
 }) {
   const { t } = useTranslation()
@@ -26,6 +27,8 @@ export function RearMirror({
     'mirrorVisible',
     true,
   )
+  const showBanner = showWarning || selfDestroy
+  const warningVariant = selfDestroy ? 'selfDestroy' : 'armed'
 
   return (
     <div className="mirror-column">
@@ -56,8 +59,8 @@ export function RearMirror({
       )}
 
       <div className="mirror-heading-area">
-        {showWarning ? (
-          <WarningBanner />
+        {showBanner ? (
+          <WarningBanner variant={warningVariant} />
         ) : (
           <HeadingTape heading={heading} />
         )}
