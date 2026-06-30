@@ -99,6 +99,7 @@ export default function GroundDroneOSD({
           satellites={telemetry.satellites}
           fs={telemetry.fs}
           vt={telemetry.vt}
+          dm={telemetry.dm}
           hasHdStream={hasHdStream}
           hdMode={hdMode}
           onHdToggle={onHdToggle}

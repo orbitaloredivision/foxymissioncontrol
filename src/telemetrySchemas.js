@@ -178,6 +178,14 @@ const FOXY_FIELDS = {
     label: 'telemetry.failsafe',
     source: 'state'
   },
+  dm: {
+    defaultValue: '',
+    type: 'string',
+    category: 'state',
+    unit: '',
+    label: 'telemetry.drivingMode',
+    source: 'state'
+  },
   f1: { 
     defaultValue: false, 
     type: 'boolean', 

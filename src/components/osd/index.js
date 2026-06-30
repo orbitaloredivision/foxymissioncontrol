@@ -10,6 +10,7 @@ export { GroundDroneIcon, FpvDroneIcon, UgvDroneIcon, VolyaDroneIcon } from './D
 export { BatteryIndicator } from './BatteryIndicator'
 export { SatelliteIndicator } from './SatelliteIndicator'
 export { FailsafeIndicator } from './FailsafeIndicator'
+export { DrivingModeIndicator } from './DrivingModeIndicator'
 export { FlyingSatelliteIndicator } from './FlyingSatelliteIndicator'
 export { PowerIndicator } from './PowerIndicator'
 

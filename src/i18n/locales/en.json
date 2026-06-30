@@ -86,6 +86,14 @@
     "unknown": "UNKNOWN",
     "na": "N/A"
   },
+
+  "drivingMode": {
+    "title": "DRIVE MODE",
+    "stop": "STOP",
+    "poni": "PONI",
+    "eko": "EKO",
+    "unknown": "UNKNOWN"
+  },
   
   "telemetry": {
     "lat": "LAT",
@@ -100,6 +108,8 @@
     "mode": "MODE",
     "time": "TIME",
     "fs": "FS",
+    "dm": "DM",
+    "drivingMode": "DRIVE MODE",
     "pitch": "PITCH",
     "roll": "ROLL",
     "yaw": "YAW",

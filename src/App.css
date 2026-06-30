@@ -1410,6 +1410,56 @@ body {
   line-height: 1.1;
 }
 
+/* Driving Mode Indicator (under failsafe) */
+.hud-driving-mode {
+  position: relative;
+  width: 120px;
+  margin-top: 8px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.driving-mode-header {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-align: center;
+  padding: 6px 8px;
+  line-height: 1.2;
+}
+
+.driving-mode-status {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 10px 8px;
+  border-top-width: 1px;
+  border-top-style: solid;
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    10px 100%,
+    0 calc(100% - 10px)
+  );
+}
+
+.driving-mode-value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-align: center;
+  line-height: 1.1;
+}
+
 /* Quality Switch (SD/HD) */
 .quality-switch {
   display: flex;

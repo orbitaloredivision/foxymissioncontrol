@@ -88,6 +88,14 @@
     "unknown": "НЕВІДОМО",
     "na": "N/A"
   },
+
+  "drivingMode": {
+    "title": "РЕЖИМ ЇЗДИ",
+    "stop": "STOP",
+    "poni": "PONI",
+    "eko": "EKO",
+    "unknown": "НЕВІДОМО"
+  },
   
   "telemetry": {
     "lat": "ШИР",
@@ -102,6 +110,8 @@
     "mode": "РЕЖ",
     "time": "ЧАС",
     "fs": "АВР",
+    "dm": "РЇ",
+    "drivingMode": "РЕЖИМ ЇЗДИ",
     "pitch": "ТАНГАЖ",
     "roll": "КРЕН",
     "yaw": "РИСКАННЯ",

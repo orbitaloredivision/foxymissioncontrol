@@ -39,6 +39,7 @@ export function VolyaHudLeftPanel({
   satellites,
   fs = 0,
   vt,
+  dm = '',
   hasHdStream,
   hdMode,
   onHdToggle,
@@ -58,6 +59,7 @@ export function VolyaHudLeftPanel({
       satellites={satellites}
       fs={fs}
       vt={vt}
+      dm={dm}
       hasHdStream={hasHdStream}
       hdMode={hdMode}
       onHdToggle={onHdToggle}

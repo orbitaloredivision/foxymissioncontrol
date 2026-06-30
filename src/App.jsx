@@ -58,6 +58,7 @@ const createInitialState = () => ({
   brake_assist: false,
   fs: 0,
   vt: undefined,
+  dm: '',
   sd: false,
   f1: false,
   f2: false,
@@ -372,6 +373,7 @@ function App() {
         updated.mode = data.mode ?? prev.mode
         updated.fs = data.fs ?? prev.fs
         updated.vt = data.vt ?? prev.vt
+        updated.dm = data.dm ?? prev.dm
         updated.sd = data.sd ?? prev.sd
         updated.f1 = data.f1 ?? prev.f1
         updated.f2 = data.f2 ?? prev.f2

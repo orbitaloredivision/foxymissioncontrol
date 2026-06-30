@@ -10,6 +10,7 @@ import { GroundDroneIcon, FpvDroneIcon, VolyaDroneIcon } from './DroneTypeIcons'
 import { HudCompass } from './HudCompass'
 import { SatelliteIndicator } from './SatelliteIndicator'
 import { FailsafeIndicator } from './FailsafeIndicator'
+import { DrivingModeIndicator } from './DrivingModeIndicator'
 import { QualitySwitch } from './QualitySwitch'
 import { useDronePref } from '../../hooks/useDronePref'
 
@@ -41,7 +42,9 @@ export function HudLeftPanel({
   satellites,
   fs = 0,
   vt,
+  dm = '',
   showFailsafe = true,
+  showDrivingMode = true,
   hasHdStream,
   hdMode,
   onHdToggle,
@@ -106,6 +109,7 @@ export function HudLeftPanel({
             </button>
           )}
           {showFailsafe && <FailsafeIndicator fs={fs} vt={vt} />}
+          {showDrivingMode && <DrivingModeIndicator dm={dm} />}
           {hasHdStream && (
             <QualitySwitch isHd={hdMode} onToggle={onHdToggle} />
           )}
