@@ -26,6 +26,22 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+normalize_code_tree() {
+  # Mac/zips often unpack as code/code/... and include __MACOSX junk.
+  rm -rf "$WDIR/__MACOSX"
+
+  if [ ! -f "$WDIR/enable_hw.sh" ] && [ -f "$WDIR/code/enable_hw.sh" ]; then
+    echo "Normalizing nested code/ directory..."
+    shopt -s dotglob
+    mv "$WDIR/code"/* "$WDIR"/
+    shopt -u dotglob
+    rmdir "$WDIR/code" 2>/dev/null || rm -rf "$WDIR/code"
+  fi
+
+  rm -rf "$WDIR/__MACOSX"
+  find "$WDIR" -name '._*' -type f -delete 2>/dev/null || true
+}
+
 echo "Update starts..."
 
 if [ -f "$TMP_FNAME" ]; then
@@ -47,7 +63,12 @@ fi
 
 if [ ! -f "$SKIP_SIG_FILE" ]; then
     unzip -o "$TMP_FNAME" -d "$WDIR"
+    normalize_code_tree
     cd "$WDIR"
+    if [ ! -f "./enable_hw.sh" ]; then
+      echo "ERROR: enable_hw.sh not found after unzip (bad code.zip layout)"
+      exit 1
+    fi
     find . -type f \( -name "*.sh" -o -name "*.py" \) -exec sed -i 's/\r$//' {} +
     shopt -s nullglob
     chmod +x *.sh *.py 2>/dev/null || true
