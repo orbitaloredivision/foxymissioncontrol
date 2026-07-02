@@ -24,6 +24,9 @@ docs/
 # Master Orange Pi install bundle (local only)
 master/
 
+# Exploded master code bundle (keep only shared/code.zip in repo)
+shared/code/
+
 # Arduino firmware reference (local only)
 arduinocode/
 
