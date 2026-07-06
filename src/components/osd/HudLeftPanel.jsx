@@ -10,7 +10,7 @@ import { GroundDroneIcon, FpvDroneIcon, VolyaDroneIcon } from './DroneTypeIcons'
 import { HudCompass } from './HudCompass'
 import { SatelliteIndicator } from './SatelliteIndicator'
 import { FailsafeIndicator } from './FailsafeIndicator'
-import { DrivingModeIndicator } from './DrivingModeIndicator'
+import { FusesIndicator } from './FusesIndicator'
 import { QualitySwitch } from './QualitySwitch'
 import { useDronePref } from '../../hooks/useDronePref'
 
@@ -42,13 +42,17 @@ export function HudLeftPanel({
   satellites,
   fs = 0,
   vt,
-  dm = '',
   showFailsafe = true,
-  showDrivingMode = true,
+  showFuses = false,
+  f1 = false,
+  f2 = false,
   hasHdStream,
   hdMode,
   onHdToggle,
   showCompass = true,
+  showSatellites = true,
+  camPing = null,
+  mmtxLoad = null,
   extraContent = null,
   droneId = null
 }) {
@@ -64,6 +68,15 @@ export function HudLeftPanel({
     ) : (
       <GroundDroneIcon size={20} active={true} />
     )
+
+  const qualitySwitch = hasHdStream ? (
+    <QualitySwitch
+      isHd={hdMode}
+      onToggle={onHdToggle}
+      camPing={camPing}
+      mmtxLoad={mmtxLoad}
+    />
+  ) : null
 
   return (
     <div className="hud-left-panel">
@@ -92,7 +105,9 @@ export function HudLeftPanel({
               {droneName.toUpperCase()}
             </span>
           </div>
-          {satellitesVisible ? (
+          {showFuses && <FusesIndicator f1={f1} f2={f2} />}
+          {!showSatellites && qualitySwitch}
+          {showSatellites && (satellitesVisible ? (
             <SatelliteIndicator
               satellites={satellites}
               onClose={() => setSatellitesVisible(false)}
@@ -107,12 +122,9 @@ export function HudLeftPanel({
             >
               <SatellitesRestoreIcon />
             </button>
-          )}
+          ))}
           {showFailsafe && <FailsafeIndicator fs={fs} vt={vt} />}
-          {showDrivingMode && <DrivingModeIndicator dm={dm} />}
-          {hasHdStream && (
-            <QualitySwitch isHd={hdMode} onToggle={onHdToggle} />
-          )}
+          {showSatellites && qualitySwitch}
           {extraContent}
         </>
       ) : (
@@ -120,7 +132,12 @@ export function HudLeftPanel({
           {/* Flying OSD - no compass, no satellites (satellites in top bar), quality switch in place of satellites */}
           <div className="hud-info-row">
             {hasHdStream && (
-              <QualitySwitch isHd={hdMode} onToggle={onHdToggle} />
+              <QualitySwitch
+                isHd={hdMode}
+                onToggle={onHdToggle}
+                camPing={camPing}
+                mmtxLoad={mmtxLoad}
+              />
             )}
             <span className="hud-drone-name">
               {droneTypeIcon}

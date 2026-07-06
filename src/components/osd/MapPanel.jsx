@@ -22,7 +22,7 @@ const mapStyles = [
   { featureType: "transit", stylers: [{ visibility: "off" }] },
 ]
 
-export function MapPanel({ pathHistory, heading, lat, lng, altitude }) {
+export function MapPanel({ pathHistory, heading, lat, lng, altitude, satellites }) {
   const { t } = useTranslation()
   const [zoom, setZoom] = useState(17)
   const mapRef = useRef(null)
@@ -104,6 +104,11 @@ export function MapPanel({ pathHistory, heading, lat, lng, altitude }) {
     <div className="map-panel">
       <div className="map-header">
         <span className="map-title">{t('osd.map')}</span>
+        {satellites != null && (
+          <span className={`map-sat${satellites <= 3 ? ' map-sat--critical' : ''}`}>
+            {t('telemetry.sat')}: {satellites}
+          </span>
+        )}
         <span className="map-alt">{t('osd.altitude')}: {altitude.toFixed(0)}m</span>
         <span className="map-coords">
           {lat ? lat.toFixed(6) : '-.------'}°, {lng ? lng.toFixed(6) : '-.------'}°

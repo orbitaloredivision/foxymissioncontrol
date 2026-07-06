@@ -55,7 +55,7 @@
     "speed": "SPEED",
     "altitude": "ALTITUDE",
     "sat": "SAT",
-    "satellites": "Satellites",
+    "satellites": "SATELLITES",
     "pwr": "PWR",
     "power": "POWER",
     "speedUnit": "km/h",
@@ -87,12 +87,22 @@
     "na": "N/A"
   },
 
+  "fuses": {
+    "title": "FUSES"
+  },
+
   "drivingMode": {
     "title": "DRIVE MODE",
     "stop": "STOP",
     "poni": "PONI",
     "eko": "EKO",
     "unknown": "UNKNOWN"
+  },
+
+  "cameraWidget": {
+    "title": "CAMERA",
+    "ping": "PING",
+    "mmtx": "MMTX"
   },
   
   "telemetry": {
@@ -115,7 +125,9 @@
     "yaw": "YAW",
     "flightMode": "MODE",
     "throttle": "THR",
-    "armed": "ARM"
+    "armed": "ARM",
+    "camPing": "PING",
+    "mmtxLoad": "LOAD"
   },
   
   "battery": {

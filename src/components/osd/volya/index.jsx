@@ -10,7 +10,8 @@ import {
   Crosshair,
   ControlIcon,
   TelemetryStrip,
-  MapPanel
+  MapPanel,
+  DrivingModeIndicator,
 } from '..'
 import { useMapResize } from '../useMapResize'
 import { useDronePref } from '../../../hooks/useDronePref'
@@ -39,10 +40,11 @@ export function VolyaHudLeftPanel({
   satellites,
   fs = 0,
   vt,
-  dm = '',
   hasHdStream,
   hdMode,
   onHdToggle,
+  camPing = null,
+  mmtxLoad = null,
   pitch,
   roll,
   yaw,
@@ -59,10 +61,11 @@ export function VolyaHudLeftPanel({
       satellites={satellites}
       fs={fs}
       vt={vt}
-      dm={dm}
       hasHdStream={hasHdStream}
       hdMode={hdMode}
       onHdToggle={onHdToggle}
+      camPing={camPing}
+      mmtxLoad={mmtxLoad}
       showCompass={true}
       droneId={droneId}
       extraContent={
@@ -78,7 +81,7 @@ export function VolyaHudLeftPanel({
   )
 }
 
-export function VolyaHudRightPanel({ speed, dist, arm, park, reverse, gear, moving, brakeAssist, mode }) {
+export function VolyaHudRightPanel({ speed, dist, dm, arm, park, reverse, gear, moving, brakeAssist, mode }) {
   let mainGear
   if (park) mainGear = 'P'
   else if (reverse) mainGear = 'R'
@@ -90,6 +93,7 @@ export function VolyaHudRightPanel({ speed, dist, arm, park, reverse, gear, movi
   return (
     <div className="hud-right-panel">
       <Speedometer speed={speed} dist={dist} />
+      <DrivingModeIndicator dm={dm} />
       <VolyaGearIndicator mainGear={mainGear} lowGear={lowGear} />
       <VolyaStatusIndicators moving={moving} brakeAssist={brakeAssist} mode={mode} />
     </div>

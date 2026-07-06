@@ -16,12 +16,14 @@ export function PowerIndicator({ power }) {
   return (
     <div className="power-indicator">
       <div className="power-label">{t('osd.power')}</div>
-      <div className="power-bars">
-        <div className={`power-bar ${power >= 0 ? 'active green' : ''}`} />
-        <div className={`power-bar ${power >= 1 ? 'active green' : ''}`} />
-        <div className={`power-bar ${power >= 2 ? 'active orange' : ''}`} />
+      <div className="power-body">
+        <div className="power-bars">
+          <div className={`power-bar ${power >= 0 ? 'active green' : ''}`} />
+          <div className={`power-bar ${power >= 1 ? 'active green' : ''}`} />
+          <div className={`power-bar ${power >= 2 ? 'active orange' : ''}`} />
+        </div>
+        <div className={`power-mode level-${Math.min(power, 2)}`}>{getLabel()}</div>
       </div>
-      <div className={`power-mode level-${Math.min(power, 2)}`}>{getLabel()}</div>
     </div>
   )
 }

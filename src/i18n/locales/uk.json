@@ -89,12 +89,22 @@
     "na": "N/A"
   },
 
+  "fuses": {
+    "title": "ЗАПОБІЖНИКИ"
+  },
+
   "drivingMode": {
     "title": "РЕЖИМ ЇЗДИ",
     "stop": "STOP",
     "poni": "PONI",
     "eko": "EKO",
     "unknown": "НЕВІДОМО"
+  },
+
+  "cameraWidget": {
+    "title": "КАМЕРА",
+    "ping": "PING",
+    "mmtx": "MMTX"
   },
   
   "telemetry": {
@@ -117,7 +127,9 @@
     "yaw": "РИСКАННЯ",
     "flightMode": "РЕЖИМ",
     "throttle": "ГАЗ",
-    "armed": "АКТИВН"
+    "armed": "АКТИВН",
+    "camPing": "PING",
+    "mmtxLoad": "LOAD"
   },
   
   "battery": {

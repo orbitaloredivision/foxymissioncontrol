@@ -11,8 +11,9 @@ import {
   MainCameraBackground,
   HudLeftPanel,
   FuseSwitch,
-  Speedometer,
+  SpeedometerSimple,
   PowerIndicator,
+  DrivingModeIndicator,
   MapPanel,
   HeadingTape,
   WarningBanner,
@@ -47,6 +48,7 @@ export default function GroundDroneOSD({
 }) {
   const { t } = useTranslation()
   const isUgv = droneType === DRONE_TYPES.UGV || droneType === DRONE_TYPES.VOLYA
+  const isFoxy = droneType === DRONE_TYPES.FOXY
   const [mapVisible, setMapVisible] = useDronePref(droneId, 'mapVisible', true)
   const mapResize = useMapResize({ droneId })
   
@@ -66,8 +68,13 @@ export default function GroundDroneOSD({
 
         {/* Fuse Switches, Mirror & Heading Tape - hidden for UGV */}
         {!isUgv && (
-          <div className="hud-mirror-section">
-            <FuseSwitch label="F1" armed={telemetry.f1} />
+          <>
+            {!isFoxy && (
+              <div className="hud-mirror-section hud-fuse-bar">
+                <FuseSwitch label="F1" armed={telemetry.f1} />
+                <FuseSwitch label="F2" armed={telemetry.f2} />
+              </div>
+            )}
             <RearMirror
               rearCameraUrl={rearCameraUrl}
               heading={telemetry.heading}
@@ -75,8 +82,7 @@ export default function GroundDroneOSD({
               selfDestroy={telemetry.sd === true}
               droneId={droneId}
             />
-            <FuseSwitch label="F2" armed={telemetry.f2} />
-          </div>
+          </>
         )}
 
         {/* UGV: heading tape rendered separately (no mirror section) */}
@@ -99,17 +105,23 @@ export default function GroundDroneOSD({
           satellites={telemetry.satellites}
           fs={telemetry.fs}
           vt={telemetry.vt}
-          dm={telemetry.dm}
           hasHdStream={hasHdStream}
           hdMode={hdMode}
           onHdToggle={onHdToggle}
+          showSatellites={!isFoxy}
+          showFuses={isFoxy}
+          f1={telemetry.f1}
+          f2={telemetry.f2}
+          camPing={telemetry.cam_ping}
+          mmtxLoad={telemetry.mmtx_load}
           droneId={droneId}
         />
 
         {/* Right Panel - Speedometer & Power */}
         <div className="hud-right-panel">
-          <Speedometer speed={telemetry.speed} dist={telemetry.dist} />
+          <SpeedometerSimple speed={telemetry.speed} dist={telemetry.dist} />
           <PowerIndicator power={telemetry.power} />
+          <DrivingModeIndicator dm={telemetry.dm} />
         </div>
 
         {/* Map with integrated Altimeter */}
@@ -146,6 +158,7 @@ export default function GroundDroneOSD({
                 lat={telemetry.latitude}
                 lng={telemetry.longitude}
                 altitude={telemetry.altitude}
+                satellites={isFoxy ? telemetry.satellites : undefined}
               />
             </div>
           ) : (

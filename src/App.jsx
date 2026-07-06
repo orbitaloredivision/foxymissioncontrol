@@ -65,6 +65,8 @@ const createInitialState = () => ({
   md: 0,
   md_str: 'OFFLINE',
   telemetry_time: 0,
+  cam_ping: null,
+  mmtx_load: null,
   // Attitude data (FPV drones)
   pitch: 0,
   roll: 0,
@@ -380,6 +382,8 @@ function App() {
         updated.md = data.md ?? prev.md
         updated.md_str = data.md_str ?? prev.md_str
         updated.telemetry_time = data.telemetry_time ?? prev.telemetry_time
+        updated.cam_ping = data.cam_ping ?? prev.cam_ping
+        updated.mmtx_load = data.mmtx_load ?? prev.mmtx_load
       }
       
       // Merge Attitude data (FPV drones)
@@ -405,16 +409,19 @@ function App() {
   ]
   const directionIndex = Math.round(telemetry.heading / 45) % 8
 
+  // Get drone type from profile
+  const droneType = droneProfile?.droneType || DRONE_TYPES.FOXY
+  const foxyCameraOptions = droneType === DRONE_TYPES.FOXY
+    ? { inferHdFromSd: true, useDefaultPair: true }
+    : undefined
+
   const { frontCameraUrlSd: frontCameraUrl, frontCameraUrlHd, hasHdStream } =
-    resolveFrontCameraUrls(droneProfile)
+    resolveFrontCameraUrls(droneProfile, foxyCameraOptions)
   const rearCameraUrl = droneProfile?.rearCameraUrl || '/webrtc/cam2/whep'
   // Drone number is array index + 1
   const droneNumber = (droneProfile?._index ?? 0) + 1
   const droneName = droneProfile?.name || `Drone #${droneNumber}`
-  const mainCameraUrl = getMainCameraUrl(droneProfile, hdMode)
-
-  // Get drone type from profile
-  const droneType = droneProfile?.droneType || DRONE_TYPES.FOXY
+  const mainCameraUrl = getMainCameraUrl(droneProfile, hdMode, foxyCameraOptions)
 
   // Render OSD based on drone type
   const renderOSD = () => {
@@ -1223,6 +1230,8 @@ function TelemetryLog({ droneId, onTelemetryUpdate, onStateChange }) {
       if (data.speed !== undefined) fields.push(`SPD:${data.speed}`)
       if (data.dist !== undefined) fields.push(`DST:${data.dist}`)
       if (data.power !== undefined) fields.push(`PWR:${data.power}`)
+      if (data.cam_ping !== undefined) fields.push(`CP:${data.cam_ping}ms`)
+      if (data.mmtx_load !== undefined) fields.push(`ML:${data.mmtx_load}Mbps`)
     }
     
     // Attitude type fields (FPV drones)

@@ -25,6 +25,7 @@ export { FPV_MAP_MODES, cycleFpvMapMode, isFpvMapVisible, getInitialFpvMapMode, 
 // Controls
 export { QualitySwitch } from './QualitySwitch'
 export { FuseSwitch } from './FuseSwitch'
+export { FusesIndicator } from './FusesIndicator'
 export { ControlIcon } from './ControlIcon'
 
 // Panels
@@ -35,7 +36,7 @@ export { MainCameraBackground } from './MainCameraBackground'
 export { HudLeftPanel } from './HudLeftPanel'
 
 // Displays
-export { Speedometer } from './Speedometer'
+export { Speedometer, SpeedometerSimple, SpeedoReadout, Odometer } from './Speedometer'
 export { TelemetryStrip } from './TelemetryStrip'
 export { FlyingTelemetryStrip } from './FlyingTelemetryStrip'
 export { WarningBanner } from './WarningBanner'

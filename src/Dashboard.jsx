@@ -512,6 +512,8 @@ function Dashboard() {
               if (recordData.type === 'state') {
                 updated.speed = recordData.speed ?? updated.speed
                 updated.md_str = recordData.md_str ?? updated.md_str
+                updated.cam_ping = recordData.cam_ping ?? updated.cam_ping
+                updated.mmtx_load = recordData.mmtx_load ?? updated.mmtx_load
               }
             })
             

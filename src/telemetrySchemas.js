@@ -134,6 +134,26 @@ const BASE_FIELDS = {
     type: 'boolean', 
     category: 'meta',
     source: 'local'
+  },
+
+  // Camera / streaming metrics (from state telemetry)
+  cam_ping: {
+    defaultValue: null,
+    type: 'number',
+    category: 'state',
+    unit: 'ms',
+    format: 0,
+    label: 'telemetry.camPing',
+    source: 'state'
+  },
+  mmtx_load: {
+    defaultValue: null,
+    type: 'number',
+    category: 'state',
+    unit: 'Mbps',
+    format: 1,
+    label: 'telemetry.mmtxLoad',
+    source: 'state'
   }
 }
 

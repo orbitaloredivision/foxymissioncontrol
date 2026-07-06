@@ -227,6 +227,32 @@
   padding: 0;
 }
 
+.hud-logo .share-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+}
+
+.hud-logo .share-btn:not(:hover) {
+  opacity: 0.45;
+  border-color: color-mix(in srgb, var(--hud-primary, #00ff88) 45%, transparent);
+  color: color-mix(in srgb, var(--hud-primary, #00ff88) 45%, transparent);
+}
+
+.hud-logo .share-btn:hover {
+  opacity: 1;
+}
+
+.hud-logo .share-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+body.theme-aggressive-red .hud-logo .share-btn:not(:hover) {
+  border-color: color-mix(in srgb, #ff4444 45%, transparent);
+  color: color-mix(in srgb, #ff4444 45%, transparent);
+}
+
 /* Card variant - for dashboard cards */
 .share-btn-card {
   width: 28px;
@@ -287,17 +313,35 @@ body.theme-aggressive-red .share-btn-card:hover {
 }
 
 .camera-fit-btn {
+  width: 28px;
+  height: 28px;
   padding: 0;
 }
 
+.camera-fit-btn:not(.camera-fit-btn--fill):not(:hover) {
+  opacity: 0.45;
+  border-color: color-mix(in srgb, var(--hud-primary, #00ff88) 45%, transparent);
+  color: color-mix(in srgb, var(--hud-primary, #00ff88) 45%, transparent);
+}
+
 .camera-fit-btn svg {
-  width: 34px;
-  height: 34px;
+  width: 16px;
+  height: 16px;
   display: block;
 }
 
 .camera-fit-btn--fill {
+  opacity: 1;
   background: rgba(0, 255, 136, 0.15);
+}
+
+.camera-fit-btn--fill:hover {
+  opacity: 1;
+}
+
+body.theme-aggressive-red .camera-fit-btn:not(.camera-fit-btn--fill):not(:hover) {
+  border-color: color-mix(in srgb, #ff4444 45%, transparent);
+  color: color-mix(in srgb, #ff4444 45%, transparent);
 }
 
 body.theme-aggressive-red .camera-fit-btn--fill {

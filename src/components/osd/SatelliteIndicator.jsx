@@ -30,7 +30,7 @@ export function SatelliteIndicator({ satellites, onClose }) {
           ×
         </button>
       )}
-      <div className="sat-label"><span className="sat-icon">◎</span> {t('osd.satellites')}</div>
+      <div className="sat-label">{t('osd.satellites')}</div>
       <div className="sat-info">
         <span className={`sat-count ${getQuality()} ${isLow ? 'critical' : ''}`}>{satellites}</span>
         <span className="sat-quality">{t(`satellites.${getQuality()}`)}</span>

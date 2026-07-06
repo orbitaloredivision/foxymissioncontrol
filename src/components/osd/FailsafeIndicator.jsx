@@ -35,7 +35,6 @@ export function FailsafeIndicator({ fs = 0, vt }) {
       <div className="failsafe-header">{t('failsafe.title')}</div>
       <div className={`failsafe-status failsafe-status--${mode}`}>
         <span className="failsafe-value">{t(`failsafe.${mode}`)}</span>
-        <hr className="failsafe-divider" aria-hidden="true" />
         <span className={`failsafe-vt-value${mappedVt === null ? ' failsafe-vt-value--na' : ''}`}>
           {vtLabel}
         </span>

@@ -43,15 +43,13 @@ export default function VolyaDroneOSD({
         />
 
         {/* Rear-view mirror + heading tape (shared with Foxy, no fuse switches for Volya) */}
-        <div className="hud-mirror-section">
-          <RearMirror
-            rearCameraUrl={rearCameraUrl}
-            heading={telemetry.heading}
-            showWarning={telemetry.f1 && telemetry.f2}
-            selfDestroy={telemetry.sd === true}
-            droneId={droneId}
-          />
-        </div>
+        <RearMirror
+          rearCameraUrl={rearCameraUrl}
+          heading={telemetry.heading}
+          showWarning={telemetry.f1 && telemetry.f2}
+          selfDestroy={telemetry.sd === true}
+          droneId={droneId}
+        />
 
         <VolyaHudLeftPanel
           heading={telemetry.heading}
@@ -61,10 +59,11 @@ export default function VolyaDroneOSD({
           satellites={telemetry.satellites}
           fs={telemetry.fs}
           vt={telemetry.vt}
-          dm={telemetry.dm}
           hasHdStream={hasHdStream}
           hdMode={hdMode}
           onHdToggle={onHdToggle}
+          camPing={telemetry.cam_ping}
+          mmtxLoad={telemetry.mmtx_load}
           pitch={telemetry.pitch}
           roll={telemetry.roll}
           yaw={telemetry.yaw}
@@ -76,6 +75,7 @@ export default function VolyaDroneOSD({
         <VolyaHudRightPanel
           speed={telemetry.speed}
           dist={telemetry.dist}
+          dm={telemetry.dm}
           arm={telemetry.arm}
           park={telemetry.park}
           reverse={telemetry.reverse}

@@ -3,7 +3,7 @@
  * Horizontal heading indicator tape
  */
 
-export function HeadingTape({ heading }) {
+function buildHeadingTicks(heading) {
   const ticks = []
   for (let i = -6; i <= 6; i++) {
     const deg = Math.round((heading + i * 10) / 10) * 10
@@ -11,14 +11,28 @@ export function HeadingTape({ heading }) {
     const offset = (deg - heading) * 4
     const isMain = normalizedDeg % 30 === 0
     ticks.push(
-      <div 
-        key={i} 
+      <div
+        key={i}
         className={`htape-tick ${isMain ? 'main' : ''}`}
         style={{ left: `calc(50% + ${offset}px)` }}
       >
         {isMain && <span className="htape-label">{normalizedDeg}</span>}
         <div className="htape-mark"></div>
       </div>
+    )
+  }
+  return ticks
+}
+
+export function HeadingTape({ heading, variant = 'default' }) {
+  const ticks = buildHeadingTicks(heading)
+
+  if (variant === 'mirror') {
+    return (
+      <>
+        <div className="htape-container">{ticks}</div>
+        <div className="htape-indicator">▼</div>
+      </>
     )
   }
 

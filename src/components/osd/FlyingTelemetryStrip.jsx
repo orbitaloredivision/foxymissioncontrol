@@ -177,6 +177,11 @@ export function FlyingTelemetryStrip({
     if (type === 'mode') {
       if (data.mode !== undefined) fields.push(data.mode)
     }
+
+    if (type === 'state') {
+      if (data.cam_ping !== undefined) fields.push(`CP:${data.cam_ping}ms`)
+      if (data.mmtx_load !== undefined) fields.push(`ML:${data.mmtx_load}Mbps`)
+    }
     
     return fields.join(' ')
   }, [])

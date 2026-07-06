@@ -182,14 +182,6 @@ body.theme-aggressive-red .tv-noise-scanlines {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem 2rem;
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid var(--hud-primary, #00ff88);
-  backdrop-filter: blur(4px);
-}
-
-body.theme-aggressive-red .status-content {
-  border-color: rgba(255, 68, 68, 0.5);
 }
 
 .camera-status-overlay .status-text {
@@ -197,16 +189,18 @@ body.theme-aggressive-red .status-content {
   font-size: 0.75rem;
   color: var(--hud-primary, #00ff88);
   letter-spacing: 0.1em;
+  opacity: 0.8;
   animation: pulse 1.5s ease-in-out infinite;
 }
 
 .camera-status-overlay .status-text.error {
   color: #ff4444;
+  opacity: 0.8;
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+  0%, 100% { opacity: 0.64; }
+  50% { opacity: 0.8; }
 }
 
 /* Mirror variant - flipped horizontally */
@@ -217,10 +211,6 @@ body.theme-aggressive-red .status-content {
 /* Thumbnail variant - smaller for dashboard cards */
 .camera-thumbnail .status-text {
   font-size: 0.65rem;
-}
-
-.camera-thumbnail .status-content {
-  padding: 0.5rem 1rem;
 }
 
 

@@ -6,10 +6,42 @@
  */
 
 const DEFAULT_FRONT_WHEP = '/webrtc/cam1/whep'
+const DEFAULT_FRONT_HD_WHEP = '/webrtc/cam1_hd/whep'
 
-export function resolveFrontCameraUrls(profile) {
-  const sd = profile?.frontCameraUrl?.trim() || null
-  const hd = profile?.frontCameraUrlHd?.trim() || null
+function inferHdFromSdUrl(sdUrl) {
+  if (!sdUrl || sdUrl.includes('_hd/')) return null
+  const match = sdUrl.match(/^(\/webrtc\/cam[^/]+)(\/whep)$/)
+  return match ? `${match[1]}_hd${match[2]}` : null
+}
+
+function readSdUrl(profile) {
+  return profile?.frontCameraUrl?.trim() || profile?.frontCamera?.webrtcUrl?.trim() || null
+}
+
+function readHdUrl(profile) {
+  return (
+    profile?.frontCameraUrlHd?.trim()
+    || profile?.frontCameraHd?.webrtcUrl?.trim()
+    || profile?.frontCamera?.webrtcUrlHd?.trim()
+    || null
+  )
+}
+
+export function resolveFrontCameraUrls(profile, options = {}) {
+  const { inferHdFromSd = false, useDefaultPair = false } = options
+
+  let sd = readSdUrl(profile)
+  let hd = readHdUrl(profile)
+
+  if (inferHdFromSd && sd && !hd) {
+    hd = inferHdFromSdUrl(sd)
+  }
+
+  if (useDefaultPair && !sd && !hd) {
+    sd = DEFAULT_FRONT_WHEP
+    hd = DEFAULT_FRONT_HD_WHEP
+  }
+
   return {
     frontCameraUrlSd: sd,
     frontCameraUrlHd: hd,
@@ -19,9 +51,9 @@ export function resolveFrontCameraUrls(profile) {
 }
 
 /** Main camera on the single-drone OSD (respects HD/SD toggle). */
-export function getMainCameraUrl(profile, hdMode = true) {
+export function getMainCameraUrl(profile, hdMode = true, options) {
   const { frontCameraUrlSd, frontCameraUrlHd, hasHdStream } =
-    resolveFrontCameraUrls(profile)
+    resolveFrontCameraUrls(profile, options)
 
   if (hdMode && hasHdStream) return frontCameraUrlHd
   if (frontCameraUrlSd) return frontCameraUrlSd

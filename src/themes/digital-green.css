@@ -353,6 +353,18 @@ body {
   color: var(--theme-text-secondary);
 }
 
+.sat-info {
+  border-top-color: var(--theme-accent-primary-border);
+}
+
+.failsafe-status {
+  border-top-color: var(--theme-accent-primary-border);
+}
+
+.driving-mode-status {
+  border-top-color: var(--theme-accent-primary-border);
+}
+
 .sat-grid {
   background: rgba(0, 0, 0, 0.3);
   border-radius: 6px;
@@ -401,27 +413,22 @@ body {
 }
 
 .failsafe-header {
-  background: color-mix(in srgb, var(--theme-text-muted) 55%, var(--theme-bg-dark));
-  color: var(--theme-bg-dark);
-}
-
-.failsafe-status {
-  background: var(--theme-bg-dark);
-  border-top-color: var(--theme-hud-border);
+  color: var(--theme-text-secondary);
 }
 
 .failsafe-status--unknown .failsafe-value {
-  color: var(--theme-text-muted);
+  color: var(--theme-accent-primary);
+  text-shadow: 0 0 10px var(--theme-accent-primary-glow);
 }
 
 .failsafe-status--forward .failsafe-value {
   color: var(--theme-accent-secondary, var(--theme-accent-primary));
-  text-shadow: 0 0 8px var(--theme-accent-primary-glow);
+  text-shadow: 0 0 10px var(--theme-accent-primary-glow);
 }
 
 .failsafe-status--backward .failsafe-value {
   color: var(--theme-status-warning);
-  text-shadow: 0 0 8px color-mix(in srgb, var(--theme-status-warning) 50%, transparent);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--theme-status-warning) 50%, transparent);
 }
 
 .failsafe-status--stop .failsafe-value {
@@ -429,17 +436,27 @@ body {
   text-shadow: 0 0 10px var(--theme-accent-primary-glow);
 }
 
-.failsafe-divider {
-  border-top-color: var(--theme-hud-border);
-}
-
 .failsafe-vt-value {
   color: var(--theme-text-secondary);
 }
 
 .failsafe-vt-value--na {
-  color: var(--theme-text-muted);
-  opacity: 0.75;
+  color: var(--theme-text-secondary);
+  opacity: 1;
+}
+
+/* ========== FUSES INDICATOR THEME ========== */
+.hud-fuses {
+  background: var(--theme-bg-overlay);
+  border-color: var(--theme-accent-primary-border);
+}
+
+.fuses-header {
+  color: var(--theme-text-secondary);
+}
+
+.fuses-body {
+  border-top-color: var(--theme-accent-primary-border);
 }
 
 /* ========== DRIVING MODE INDICATOR THEME ========== */
@@ -449,17 +466,12 @@ body {
 }
 
 .driving-mode-header {
-  background: color-mix(in srgb, var(--theme-text-muted) 55%, var(--theme-bg-dark));
-  color: var(--theme-bg-dark);
-}
-
-.driving-mode-status {
-  background: var(--theme-bg-dark);
-  border-top-color: var(--theme-hud-border);
+  color: var(--theme-text-secondary);
 }
 
 .driving-mode-status--unknown .driving-mode-value {
-  color: var(--theme-text-muted);
+  color: var(--theme-accent-primary);
+  text-shadow: 0 0 10px var(--theme-accent-primary-glow);
 }
 
 .driving-mode-status--stop .driving-mode-value {
@@ -469,12 +481,38 @@ body {
 
 .driving-mode-status--poni .driving-mode-value {
   color: var(--theme-accent-secondary, var(--theme-accent-primary));
-  text-shadow: 0 0 8px var(--theme-accent-primary-glow);
+  text-shadow: 0 0 10px var(--theme-accent-primary-glow);
 }
 
 .driving-mode-status--eko .driving-mode-value {
   color: var(--theme-status-warning);
-  text-shadow: 0 0 8px color-mix(in srgb, var(--theme-status-warning) 50%, transparent);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--theme-status-warning) 50%, transparent);
+}
+
+/* ========== CAMERA WIDGET THEME ========== */
+.hud-camera {
+  background: var(--theme-bg-overlay);
+  border-color: var(--theme-accent-primary-border);
+}
+
+.camera-header {
+  color: var(--theme-text-secondary);
+}
+
+.camera-body {
+  border-top-color: var(--theme-accent-primary-border);
+}
+
+.camera-stat {
+  color: var(--theme-text-secondary);
+}
+
+.camera-stat-label {
+  color: var(--theme-text-muted);
+}
+
+.camera-stat-value {
+  color: var(--theme-text-secondary);
 }
 
 /* ========== QUALITY SWITCH THEME ========== */
@@ -521,6 +559,10 @@ body {
 }
 
 .map-alt {
+  color: var(--theme-accent-secondary);
+}
+
+.map-sat {
   color: var(--theme-accent-secondary);
 }
 
@@ -629,7 +671,11 @@ body.theme-digital-green .map-theme-overlay {
 }
 
 .power-label {
-  color: var(--theme-text-muted);
+  color: var(--theme-text-secondary);
+}
+
+.power-body {
+  border-top-color: var(--theme-accent-primary-border);
 }
 
 .power-bar {

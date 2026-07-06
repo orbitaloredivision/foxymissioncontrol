@@ -108,6 +108,8 @@ export default function FlyingDroneOSD({
           hasHdStream={hasHdStream}
           hdMode={hdMode}
           onHdToggle={onHdToggle}
+          camPing={telemetry.cam_ping}
+          mmtxLoad={telemetry.mmtx_load}
           showCompass={false}
           droneId={droneId}
         />

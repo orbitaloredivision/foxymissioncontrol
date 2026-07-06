@@ -2,17 +2,18 @@
  * RearMirror
  *
  * Shared rear-view mirror column used by ground/Volya OSDs. Encapsulates the
- * fold button, mirrored camera feed and the heading tape area below it (which
- * can optionally switch to a WarningBanner for Foxy-style F1+F2 armed state).
+ * fold button (retained but hidden), mirrored camera feed with heading tape
+ * overlaid on top (htape-container + indicator only). Armed/self-destruct warning
+ * overlays the camera when both fuses are active.
  *
- * Visibility of the mirror is persisted per drone in a cookie via useDronePref
- * so it loads at the correct state before first paint.
+ * The mirror is draggable with edge snapping; position is persisted per drone.
  */
 import { useTranslation } from 'react-i18next'
 import CameraFeed from '../CameraFeed'
 import { HeadingTape } from './HeadingTape'
 import { WarningBanner } from './WarningBanner'
 import { useDronePref } from '../../hooks/useDronePref'
+import { useDraggableMirror } from './useDraggableMirror'
 
 export function RearMirror({
   rearCameraUrl,
@@ -27,14 +28,37 @@ export function RearMirror({
     'mirrorVisible',
     true,
   )
+  const {
+    elementRef,
+    dragging,
+    beginDrag,
+    style,
+    hasPosition,
+  } = useDraggableMirror({ droneId })
+
   const showBanner = showWarning || selfDestroy
   const warningVariant = selfDestroy ? 'selfDestroy' : 'armed'
 
+  const columnClassName = [
+    'mirror-column',
+    hasPosition ? 'mirror-column--positioned' : '',
+    dragging ? 'mirror-column--dragging' : '',
+  ].filter(Boolean).join(' ')
+
   return (
-    <div className="mirror-column">
+    <div
+      ref={elementRef}
+      className={columnClassName}
+      style={style}
+      onMouseDown={beginDrag}
+    >
+      {/* Retained for future fold UX — hidden via CSS */}
       <button
-        className="mirror-fold-btn"
+        type="button"
+        className="mirror-fold-btn mirror-fold-btn--retired"
         onClick={() => setMirrorVisible((v) => !v)}
+        tabIndex={-1}
+        aria-hidden="true"
       >
         {mirrorVisible ? (
           <svg viewBox="0 0 24 10" width="28" height="10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -53,18 +77,18 @@ export function RearMirror({
         <div className="rear-mirror">
           <div className="mirror-frame">
             <CameraFeed streamUrl={rearCameraUrl} variant="mirror" />
+            {showBanner && (
+              <div className="mirror-warning-overlay">
+                <WarningBanner variant={warningVariant} />
+              </div>
+            )}
+            <div className="mirror-heading-area">
+              <HeadingTape heading={heading} variant="mirror" />
+            </div>
             <span className="mirror-label">{t('osd.rear')}</span>
           </div>
         </div>
       )}
-
-      <div className="mirror-heading-area">
-        {showBanner ? (
-          <WarningBanner variant={warningVariant} />
-        ) : (
-          <HeadingTape heading={heading} />
-        )}
-      </div>
     </div>
   )
 }

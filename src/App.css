@@ -770,7 +770,8 @@ body {
 }
 
 /* ========== FUSE SWITCHES & REAR VIEW MIRROR LAYOUT ========== */
-.hud-mirror-section {
+.hud-mirror-section,
+.hud-fuse-bar {
   position: absolute;
   top: 55px;
   left: 50%;
@@ -778,19 +779,41 @@ body {
   z-index: 20;
   display: flex;
   align-items: flex-start;
-  gap: 15px;
+  gap: 10px;
 }
 
-.rear-mirror {
-  /* No longer absolute - part of flex container */
-}
-
-/* Column layout for mirror + fold button + heading tape */
 .mirror-column {
+  position: fixed;
+  z-index: 25;
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 420px;
+  touch-action: none;
+}
+
+.mirror-column:not(.mirror-column--positioned) {
+  top: 55px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.mirror-column--positioned {
+  transform: none;
+}
+
+.mirror-column:hover {
+  cursor: grab;
+}
+
+.mirror-column--dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.rear-mirror {
+  position: relative;
+  width: 100%;
 }
 
 .mirror-fold-btn {
@@ -810,22 +833,77 @@ body {
   margin-bottom: -1px;
 }
 
+/* Fold control retained in markup; hidden in favour of drag repositioning */
+.mirror-fold-btn--retired {
+  display: none !important;
+}
+
 .mirror-fold-btn:hover {
   color: var(--theme-accent, #00ff88);
   background: rgba(0, 255, 136, 0.1);
 }
 
-.mirror-heading-area {
-  width: 300px;
-  margin-top: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  overflow: visible;
+body.mirror-drag-active {
+  user-select: none;
+  cursor: grabbing !important;
 }
 
-.mirror-heading-area .heading-tape {
+.mirror-frame .mirror-heading-area {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 6;
+  height: 34px;
+  overflow: hidden;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.75) 0%,
+    rgba(0, 0, 0, 0.35) 65%,
+    transparent 100%
+  );
+}
+
+.mirror-frame .mirror-heading-area .htape-container {
+  top: 4px;
+  height: 22px;
+}
+
+.mirror-frame .mirror-heading-area .htape-label {
+  font-size: 0.55rem;
+}
+
+.mirror-frame .mirror-heading-area .htape-mark {
+  height: 6px;
+}
+
+.mirror-frame .mirror-heading-area .htape-tick.main .htape-mark {
+  height: 9px;
+}
+
+.mirror-frame .mirror-heading-area .htape-indicator {
+  top: 20px;
+  font-size: 0.6rem;
+}
+
+.mirror-warning-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  background: rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+
+.mirror-warning-overlay .warning-banner {
+  transform: scale(0.72);
+  transform-origin: center;
   width: 100%;
+  max-width: 100%;
 }
 
 /* Fuse Switch */
@@ -1116,7 +1194,7 @@ body {
   top: 60px;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 10px;
 }
 
 /* Compass Layout */
@@ -1279,17 +1357,18 @@ body {
   font-size: 0.6rem;
   letter-spacing: 2px;
   text-align: center;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
+  margin-bottom: 0;
+  line-height: 1.2;
 }
 
-.sat-icon {
-  font-size: 0.8rem;
-  filter: grayscale(100%);
-  opacity: 0.8;
+.sat-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top-width: 1px;
+  border-top-style: solid;
 }
 
 .sat-grid {
@@ -1317,16 +1396,8 @@ body {
   50% { opacity: 1; transform: scale(1.1); }
 }
 
-.sat-info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: 8px;
-}
-
 .sat-count {
   font-family: 'Orbitron', sans-serif;
-  font-size: 1.4rem;
   font-weight: 700;
 }
 
@@ -1342,125 +1413,212 @@ body {
   margin-top: 2px;
 }
 
-/* Failsafe Indicator (under satellites) */
+/* Failsafe Indicator (under satellites) — layout matches .hud-satellites */
 .hud-failsafe {
   position: relative;
   width: 120px;
-  margin-top: 8px;
   border-width: 1px;
   border-style: solid;
   border-radius: 8px;
-  overflow: hidden;
+  padding: 12px;
 }
 
 .failsafe-header {
   font-family: 'Orbitron', sans-serif;
-  font-size: 0.55rem;
-  font-weight: 700;
-  letter-spacing: 1px;
+  font-size: 0.6rem;
+  letter-spacing: 2px;
   text-align: center;
-  padding: 6px 8px;
+  margin-bottom: 0;
   line-height: 1.2;
 }
 
 .failsafe-status {
-  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  min-height: 42px;
-  padding: 10px 8px 14px;
+  margin-top: 8px;
+  padding-top: 8px;
   border-top-width: 1px;
   border-top-style: solid;
-  clip-path: polygon(
-    0 0,
-    100% 0,
-    100% calc(100% - 10px),
-    calc(100% - 10px) 100%,
-    10px 100%,
-    0 calc(100% - 10px)
-  );
 }
 
 .failsafe-value {
   font-family: 'Orbitron', sans-serif;
-  font-size: 0.85rem;
   font-weight: 700;
-  letter-spacing: 1px;
   text-align: center;
   line-height: 1.1;
 }
 
 .failsafe-divider {
-  width: 55%;
-  height: 0;
-  border: none;
-  border-top: 1px solid var(--theme-hud-border, rgba(255, 255, 255, 0.25));
-  margin: 7px 0 5px;
-  opacity: 0.85;
+  display: none;
 }
 
 .failsafe-vt-value {
   font-family: 'Orbitron', sans-serif;
-  font-size: 0.7rem;
-  font-weight: 600;
+  font-size: 0.55rem;
   letter-spacing: 1px;
   text-align: center;
+  margin-top: 2px;
   line-height: 1.1;
 }
 
-/* Driving Mode Indicator (under failsafe) */
-.hud-driving-mode {
+/* Fuses Indicator (Foxy) — layout matches .hud-failsafe */
+.hud-fuses {
   position: relative;
   width: 120px;
-  margin-top: 8px;
   border-width: 1px;
   border-style: solid;
   border-radius: 8px;
-  overflow: hidden;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.fuses-header {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 2px;
+  text-align: center;
+  margin-bottom: 0;
+  line-height: 1.2;
+}
+
+.fuses-body {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top-width: 1px;
+  border-top-style: solid;
+}
+
+.hud-fuses .fuse-switch {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 4px;
+}
+
+.hud-fuses .fuse-label {
+  font-size: 0.65rem;
+  margin-bottom: 4px;
+}
+
+.hud-fuses .fuse-status {
+  font-size: 0.5rem;
+}
+
+/* Driving Mode Indicator — layout matches other HUD status widgets */
+.hud-driving-mode {
+  position: relative;
+  width: 120px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.hud-right-panel .hud-driving-mode {
+  width: 160px;
 }
 
 .driving-mode-header {
   font-family: 'Orbitron', sans-serif;
-  font-size: 0.55rem;
-  font-weight: 700;
-  letter-spacing: 1px;
+  font-size: 0.6rem;
+  letter-spacing: 2px;
   text-align: center;
-  padding: 6px 8px;
+  margin-bottom: 0;
   line-height: 1.2;
 }
 
 .driving-mode-status {
-  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  min-height: 42px;
-  padding: 10px 8px;
+  margin-top: 8px;
+  padding-top: 8px;
   border-top-width: 1px;
   border-top-style: solid;
-  clip-path: polygon(
-    0 0,
-    100% 0,
-    100% calc(100% - 10px),
-    calc(100% - 10px) 100%,
-    10px 100%,
-    0 calc(100% - 10px)
-  );
 }
 
 .driving-mode-value {
   font-family: 'Orbitron', sans-serif;
-  font-size: 0.85rem;
   font-weight: 700;
-  letter-spacing: 1px;
   text-align: center;
   line-height: 1.1;
 }
 
-/* Quality Switch (SD/HD) */
+/* Camera widget (quality switch + stream stats) */
+.hud-camera {
+  position: relative;
+  width: 120px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 8px;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.camera-header {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 2px;
+  text-align: center;
+  margin-bottom: 0;
+  line-height: 1.2;
+}
+
+.camera-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top-width: 1px;
+  border-top-style: solid;
+}
+
+.hud-camera .quality-switch {
+  width: 100%;
+  border: none;
+  padding: 0 0 8px;
+  background: transparent;
+}
+
+.hud-camera .quality-switch:hover {
+  background: transparent;
+}
+
+.camera-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+}
+
+.camera-stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  line-height: 1.2;
+  letter-spacing: 0.5px;
+}
+
+.camera-stat-label {
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.camera-stat-value {
+  text-align: right;
+}
+
+/* Quality Switch (SD/HD toggle row) */
 .quality-switch {
   display: flex;
   align-items: center;
@@ -1531,7 +1689,7 @@ body {
   top: 60px;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 10px;
 }
 
 .speedometer {
@@ -1541,6 +1699,14 @@ body {
   padding: 15px;
   width: 160px;
   text-align: center;
+}
+
+.speedometer--simple {
+  padding: 12px 15px;
+}
+
+.speedometer--simple .speedo-readout {
+  margin-top: 0;
 }
 
 .speedo-svg {
@@ -1613,7 +1779,7 @@ body {
   border-width: 1px;
   border-style: solid;
   border-radius: 8px;
-  padding: 10px 15px;
+  padding: 12px;
   width: 160px;
   text-align: center;
 }
@@ -1622,7 +1788,16 @@ body {
   font-family: 'Orbitron', sans-serif;
   font-size: 0.6rem;
   letter-spacing: 2px;
-  margin-bottom: 8px;
+  text-align: center;
+  margin-bottom: 0;
+  line-height: 1.2;
+}
+
+.power-body {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top-width: 1px;
+  border-top-style: solid;
 }
 
 .power-bars {
@@ -1634,16 +1809,19 @@ body {
 
 .power-bar {
   width: 40px;
-  height: 18px;
+  height: 9px;
   border-width: 2px;
   border-style: solid;
-  border-radius: 4px;
   transition: all 0.3s ease;
   background: transparent;
 }
 
 .power-bar:first-child {
   border-radius: 4px 0 0 4px;
+}
+
+.power-bar:nth-child(2) {
+  border-radius: 0;
 }
 
 .power-bar:last-child {
@@ -2403,6 +2581,17 @@ body {
   font-weight: 600;
 }
 
+.map-sat {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.map-sat--critical {
+  color: #ff4444;
+  text-shadow: 0 0 6px rgba(255, 68, 68, 0.5);
+}
+
 .map-coords {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.6rem;
@@ -3113,8 +3302,8 @@ body {
     height: 100px;
   }
   
-  .mirror-heading-area {
-    width: 260px;
+  .mirror-frame .mirror-heading-area .htape-label {
+    font-size: 0.5rem;
   }
 
   .warning-text {
@@ -3171,8 +3360,8 @@ body {
     height: 85px;
   }
   
-  .mirror-heading-area {
-    width: 240px;
+  .mirror-frame .mirror-heading-area {
+    height: 30px;
   }
 
   .warning-text {
@@ -3233,8 +3422,13 @@ body {
     height: 60px;
   }
   
-  .mirror-heading-area {
-    width: 180px;
+  .mirror-frame .mirror-heading-area {
+    height: 26px;
+  }
+
+  .mirror-frame .mirror-heading-area .htape-indicator {
+    top: 16px;
+    font-size: 0.5rem;
   }
 
   .warning-text {
@@ -3548,9 +3742,13 @@ body {
   gap: 12px;
 }
 
-.flying-drone-osd .hud-info-row .quality-switch {
+.flying-drone-osd .hud-info-row .hud-camera {
   width: 112px;
   padding: 8px 10px;
+}
+
+.flying-drone-osd .hud-info-row .hud-camera .quality-switch {
+  padding: 0 0 6px;
 }
 
 /* ========== ALTITUDE TAPE (Garmin G1000 Style) ========== */
