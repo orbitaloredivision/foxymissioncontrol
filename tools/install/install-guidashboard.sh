@@ -253,6 +253,8 @@ run_npm_install_with_heartbeat() {
         echo -e "    ${GRAY}+----------------------------------------------------------${NC}"
     fi
 
+    ensure_orangepi_npm_cache
+
     (
         cd "$workdir" || exit 1
         sudo -u orangepi npm install
@@ -467,6 +469,38 @@ run_as_orangepi() {
     sudo -u orangepi HOME="$HOME_DIR" PM2_HOME="$HOME_DIR/.pm2" bash -c "$1"
 }
 
+# Root runs npm for global packages (pm2, node-gyp); that can leave root-owned
+# files in ~/.npm and break subsequent sudo -u orangepi npm install (EACCES).
+ensure_orangepi_npm_cache() {
+    local npm_dir="$HOME_DIR/.npm"
+    if [ ! -d "$npm_dir" ]; then
+        mkdir -p "$npm_dir"
+        chown orangepi:orangepi "$npm_dir"
+        return 0
+    fi
+    if find "$npm_dir" -user root 2>/dev/null | head -1 | grep -q .; then
+        chown -R orangepi:orangepi "$npm_dir"
+    fi
+}
+
+# Avoid running pm2 as root (creates /root/.pm2 and can leave root-owned sockets in ~/.pm2).
+get_pm2_version() {
+    local ver
+    ver=$(npm list -g pm2 --depth=0 2>/dev/null | sed -n 's/.*pm2@\([0-9.]*\).*/\1/p' | head -1)
+    if [ -z "$ver" ]; then
+        ver=$(sudo -u orangepi HOME="$HOME_DIR" PM2_HOME="$HOME_DIR/.pm2" pm2 --version 2>/dev/null || echo "unknown")
+    fi
+    echo "$ver"
+}
+
+ensure_orangepi_pm2_home() {
+    local pm2_dir="$HOME_DIR/.pm2"
+    pm2 kill > /dev/null 2>&1 || true
+    mkdir -p "$pm2_dir"
+    chown -R orangepi:orangepi "$pm2_dir"
+    rm -f "$pm2_dir/rpc.sock" "$pm2_dir/pub.sock"
+}
+
 # =============================================================================
 # Package Check Functions
 # =============================================================================
@@ -674,13 +708,14 @@ install_system_packages() {
             print_detail "Native modules may fail to compile"
         fi
     fi
+    ensure_orangepi_npm_cache
 }
 
 install_pm2() {
     print_step 2 "Checking PM2 Process Manager"
     
     if cmd_exists pm2; then
-        local ver=$(pm2 --version 2>/dev/null)
+        local ver=$(get_pm2_version)
         print_installed "pm2 v$ver"
         
         # Check if update available
@@ -693,7 +728,7 @@ install_pm2() {
             start_spinner "Updating PM2"
             if npm update -g pm2 > /tmp/pm2-update.log 2>&1; then
                 stop_spinner
-                print_success "PM2 updated to v$(pm2 --version)"
+                print_success "PM2 updated to v$(get_pm2_version)"
             else
                 stop_spinner
                 print_warning "PM2 update failed, continuing with v$ver"
@@ -711,12 +746,13 @@ install_pm2() {
         fi
         
         add_rollback "npm uninstall -g pm2"
-        print_success "PM2 v$(pm2 --version) installed"
+        print_success "PM2 v$(get_pm2_version) installed"
     fi
     
     # Setup PM2 startup
     start_spinner "Configuring PM2 startup service"
-    sudo -u orangepi bash -c "pm2 startup systemd -u orangepi --hp $HOME_DIR" > /tmp/pm2-startup.log 2>&1 || true
+    ensure_orangepi_pm2_home
+    sudo -u orangepi HOME="$HOME_DIR" PM2_HOME="$HOME_DIR/.pm2" bash -c "pm2 startup systemd -u orangepi --hp $HOME_DIR" > /tmp/pm2-startup.log 2>&1 || true
     
     local startup_cmd=$(grep -o "sudo .*" /tmp/pm2-startup.log | head -1)
     if [ -n "$startup_cmd" ]; then
@@ -724,6 +760,8 @@ install_pm2() {
     fi
     stop_spinner
     print_success "PM2 startup configured"
+    ensure_orangepi_pm2_home
+    ensure_orangepi_npm_cache
 }
 
 create_directories() {
@@ -1307,6 +1345,8 @@ EOF
     
     cd "$REPO_DIR"
     local npm_exit=0
+
+    ensure_orangepi_npm_cache
     
     sudo -u orangepi npm install 2>&1 | while IFS= read -r line; do
         echo -e "    ${GRAY}|${NC} $line"
@@ -1489,8 +1529,7 @@ start_backend() {
     local LOG="/tmp/guidashboard-upgrade.log"
     echo "--- start_backend $(date) ---" >> "$LOG" 2>/dev/null || true
     
-    # Kill root's PM2 daemon if running (it interferes with orangepi's PM2)
-    pm2 kill > /dev/null 2>&1 || true
+    ensure_orangepi_pm2_home
     
     run_as_orangepi "echo PATH=\$PATH" >> "$LOG" 2>/dev/null || true
     run_as_orangepi "which pm2 2>/dev/null || echo pm2_NOT_FOUND" >> "$LOG" 2>/dev/null || true
