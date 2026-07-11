@@ -58,10 +58,50 @@ export function readChannels(gamepad) {
   return channels
 }
 
+function axisToMappedUs(raw, item) {
+  const min = Number(item.min), center = Number(item.center), max = Number(item.max)
+  let value = raw >= center
+    ? 1500 + 500 * (raw - center) / Math.max(0.001, max - center)
+    : 1500 - 500 * (center - raw) / Math.max(0.001, center - min)
+  if (item.invert) value = 3000 - value
+  return Math.round(Math.max(1000, Math.min(2000, value)))
+}
+
+function readMappedChannels(gamepad, mapping) {
+  if (!Array.isArray(mapping) || mapping.length !== 16) return readChannels(gamepad)
+  const channels = Array(16).fill(1500)
+  mapping.forEach((item, index) => {
+    const channel = Number.isInteger(item.channel) ? item.channel : index
+    if (channel < 0 || channel > 15) return
+    if (item.sourceType === 'axis') channels[channel] = axisToMappedUs(gamepad.axes[item.sourceIndex] || 0, item)
+    if (item.sourceType === 'button2' || item.sourceType === 'button3') {
+      const count = item.sourceType === 'button3' ? 3 : 2
+      const active = (item.buttons || []).slice(0, count).findIndex(button => gamepad.buttons[button]?.pressed)
+      const values = count === 3 ? [1000, 1500, 2000] : [1000, 2000]
+      let value = active >= 0 ? values[active] : 1500
+      if (item.invert) value = 3000 - value
+      channels[channel] = value
+    }
+  })
+  return channels
+}
+
 export function useTx16Control(slaveId, enabled) {
   const [state, setState] = useState('disconnected')
   const [gamepadConnected, setGamepadConnected] = useState(false)
   const socketRef = useRef(null)
+  const [mapping, setMapping] = useState(null)
+
+  useEffect(() => {
+    let mounted = true
+    const load = () => fetch('/api/auth/controller-settings')
+      .then(response => response.json())
+      .then(data => { if (mounted) setMapping(Array.isArray(data.config?.mapping) ? data.config.mapping : null) })
+      .catch(() => {})
+    load()
+    addEventListener('focus', load)
+    return () => { mounted = false; removeEventListener('focus', load) }
+  }, [])
 
   useEffect(() => {
     const update = () => setGamepadConnected([...navigator.getGamepads()].some(Boolean))
@@ -110,12 +150,13 @@ export function useTx16Control(slaveId, enabled) {
       }
     }
 
-    connect()
+    // Give the previous route/socket a moment to release its exclusive lease.
+    timer = setTimeout(connect, 150)
     const sender = setInterval(() => {
       const socket = socketRef.current
       const gamepad = [...navigator.getGamepads()].find(Boolean)
       if (!gamepad || socket?.readyState !== WebSocket.OPEN) return
-      const channels = readChannels(gamepad)
+      const channels = readMappedChannels(gamepad, mapping)
       if (!channels) {
         setState('invalid-gamepad-state')
         return
@@ -129,7 +170,7 @@ export function useTx16Control(slaveId, enabled) {
       clearInterval(sender)
       socket?.close(1000, 'Page closed')
     }
-  }, [slaveId, enabled])
+  }, [slaveId, enabled, mapping])
 
   return { state, gamepadConnected }
 }

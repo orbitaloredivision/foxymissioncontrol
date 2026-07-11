@@ -204,6 +204,18 @@ export function ControllerSettingsPanel() {
       setCapture({ channel: index, type: 'buttons', count: item.sourceType === 'button3' ? 3 : 2, position: 0 })
     }
   }
+  const toggleControl = async () => {
+    if (enabled) { setEnabled(false); return }
+    if (!slaveId) return
+    try {
+      const response = await fetch('/api/drones/activate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ droneId: slaveId })
+      })
+      if (!response.ok) throw new Error('Activation failed')
+      setEnabled(true)
+    } catch { setConnection('error') }
+  }
 
   return <div className="control-settings-panel">
     <label>Дрон<select value={slaveId} onChange={event => { setEnabled(false); setSlaveId(event.target.value) }}><option value="">Оберіть дрон</option>{Object.entries(profiles).map(([id,p]) => <option key={id} value={id}>{p.name || `Drone ${id}`}</option>)}</select></label>
@@ -222,7 +234,7 @@ export function ControllerSettingsPanel() {
     </>}
     <div className={`control-connection ${connection}`}>WebSocket: {connection}</div>
     <label className="autoconnect-option" style={{ display: 'flex', alignItems: 'center', gap: 9 }}><input type="checkbox" checked={autoConnect} onChange={event => setAutoConnect(event.target.checked)}/> Автопідключати WebSocket при відкритті налаштувань</label>
-    <button className={`control-enable ${enabled ? 'stop' : ''}`} disabled={!slaveId} onClick={() => setEnabled(v => !v)}>{enabled ? 'ЗУПИНИТИ КЕРУВАННЯ' : 'УВІМКНУТИ КЕРУВАННЯ'}</button>
+    <button className={`control-enable ${enabled ? 'stop' : ''}`} disabled={!slaveId} onClick={toggleControl}>{enabled ? 'ЗУПИНИТИ КЕРУВАННЯ' : 'УВІМКНУТИ КЕРУВАННЯ'}</button>
     <p className={`control-warning ${saveState}`}>Конфігурація: {saveState === 'saving' ? 'зберігається…' : saveState === 'error' ? 'помилка збереження' : 'збережена на сервері'}. Одним дроном може керувати лише одна вкладка.</p>
   </div>
 }
