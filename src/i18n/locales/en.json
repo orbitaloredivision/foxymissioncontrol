@@ -235,7 +235,23 @@
     "droneConfFailed": "Drone config script failed",
     "deleteProfile": "Delete Profile",
     "deleteConfirm": "Are you sure you want to delete the profile for Drone #{{id}}?",
-    "open": "Open →"
+    "open": "Open →",
+    "wireguardEnabled": "Enable WireGuard for this drone",
+    "wireguardHint": "Master automatically assigns a unique tunnel IP from the shared 10.77.0.0/16 pool.",
+    "wireguardClientAddress": "Automatic MikroTik WireGuard address",
+    "wireguardAutoAddress": "Assigned after saving",
+    "wireguardMasterAddress": "Master WireGuard address",
+    "wireguardMasterRouteHint": "On MikroTik use 10.77.0.1/32 as the peer Allowed Address and route dst-address.",
+    "wireguardClientPublicKey": "MikroTik public key",
+    "wireguardServerEndpoint": "Public Starlink/MikroTik endpoint",
+    "wireguardServerPublicKey": "Master public key",
+    "wireguardAllowedIps": "Allowed addresses behind MikroTik / Keepalive",
+    "wireguardAllowedIpsHint": "Multiple addresses or subnets may be separated by commas, for example: 10.77.0.10/32, 10.77.0.8/32",
+    "wireguardMikrotikConfig": "Ready MikroTik configuration",
+    "wireguardStatusEnabled": "Status: enabled; the peer will be applied on Master after saving.",
+    "wireguardStatusSaved": "Status: settings saved, but the peer is disabled.",
+    "wireguardStatusDisabled": "Status: WireGuard is not configured.",
+    "wireguardEndpointHint": "You may enter only the public IP/hostname; port 51820 is added automatically."
   },
   
   "discover": {
@@ -416,4 +432,3 @@
     "switchToFill": "Switch to fill (stretch to screen)"
   }
 }
-

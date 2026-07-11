@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, useSearchParams, Link } from 'react-router-dom'
+import { useTx16Control } from './hooks/useTx16Control.js'
 import { GoogleMap, useJsApiLoader, Marker, Polyline } from '@react-google-maps/api'
 import { useTranslation } from 'react-i18next'
 import './App.css'
@@ -8,7 +9,6 @@ import { useTheme } from './hooks/useTheme'
 import CameraFeed from './components/CameraFeed'
 import ShareInfoModal, { ShareButton } from './components/ShareInfoModal'
 import FoxyLogo from './components/FoxyLogo'
-import { isAuthenticated, setAuthCookie } from './utils/auth'
 import { DRONE_TYPES } from './telemetrySchemas'
 import GroundDroneOSD from './GroundDroneOSD'
 import FlyingDroneOSD from './FlyingDroneOSD'
@@ -83,7 +83,8 @@ function App() {
   
   // Get drone ID from URL params (can be numeric string like "1604695971")
   const { droneId: droneIdParam } = useParams()
-  const droneId = droneIdParam || '1'
+  const [searchParams] = useSearchParams()
+  const droneId = droneIdParam || searchParams.get('slave') || '1'
   
   // Drone profile state
   const [droneProfile, setDroneProfile] = useState(null)
@@ -113,7 +114,9 @@ function App() {
   const [telemetry, setTelemetry] = useState(createInitialState)
   const [latestTelemetryData, setLatestTelemetryData] = useState(null)
   const [isActive, setIsActive] = useState(false) // Whether this drone is actively controlled
-  const [elrsConnected, setElrsConnected] = useState(true) // ELRS connection status
+  // A green controller icon means this exact drone receives TX16 commands.
+  const { gamepadConnected } = useTx16Control(droneId, isActive)
+  const [elrsConnected, setElrsConnected] = useState(true) // ELRS or direct USB control status
   const [hdMode, setHdMode] = useState(true) // HD quality mode for main camera (default: HD)
   
   // Telemetry log state (lifted from TelemetryLog for sharing with FlyingDroneOSD)
@@ -188,7 +191,7 @@ function App() {
         const data = await response.json()
         if (!isMounted) return
         
-        setElrsConnected(data.connected)
+        setElrsConnected(data.connected || gamepadConnected)
       } catch (error) {
         if (error.name !== 'AbortError') {
           // On error, assume disconnected
@@ -205,41 +208,30 @@ function App() {
       controller.abort()
       clearInterval(interval)
     }
-  }, [])
+  }, [gamepadConnected])
   
   // Start activation process (called after auth verified or if already authenticated)
   const startActivation = async () => {
     setActivating(true)
-    
+    let activated = false
+
     // Call activate endpoint to write droneId to /dev/shm/active
     try {
-      await fetch(`${API_BASE_URL}/api/drones/activate`, {
+      const response = await fetch(`${API_BASE_URL}/api/drones/activate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ droneId })
       })
+      if (!response.ok) throw new Error('Activation failed')
+      activated = true
+      // Start USB TX16 -> CRSF immediately; telemetry is a consequence, not a prerequisite.
+      setIsActive(true)
     } catch (err) {
       console.error('Activate endpoint error:', err)
+      setActivateError(err.message)
     }
-    
-    // Wait for telemetry (min 1s, max 5s)
-    const startTime = Date.now()
-    const MIN_WAIT = 1000
-    const MAX_WAIT = 5000
-    
-    await new Promise((resolve) => {
-      const checkInterval = setInterval(() => {
-        const elapsed = Date.now() - startTime
-        
-        if (elapsed >= MIN_WAIT && isActive) {
-          clearInterval(checkInterval)
-          resolve()
-        } else if (elapsed >= MAX_WAIT) {
-          clearInterval(checkInterval)
-          resolve()
-        }
-      }, 200)
-    })
+
+    if (activated) await new Promise(resolve => setTimeout(resolve, 300))
     
     // Close modal and reset state
     setActivating(false)
@@ -272,7 +264,6 @@ function App() {
       
       if (data.success) {
         console.log('[ACTIVATE] Password valid for drone:', droneId)
-        setAuthCookie() // Save authentication for 1 hour
         setActivateLoading(false)
         await startActivation()
       } else {
@@ -301,15 +292,8 @@ function App() {
       setShowActivateModal(true)
       setActivatePasskey('')
       setActivateError(null)
-      
-      // If already authenticated, skip password and start activation immediately
-      if (isAuthenticated()) {
-        console.log('[ACTIVATE] Already authenticated, skipping password')
-        setSkipPasswordForm(true)
-        setTimeout(() => startActivation(), 100)
-      } else {
-        setSkipPasswordForm(false)
-      }
+      setSkipPasswordForm(true)
+      setTimeout(() => startActivation(), 100)
     }
   }
   

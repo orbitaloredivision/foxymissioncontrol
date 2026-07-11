@@ -6,7 +6,6 @@ import CameraFeed from './components/CameraFeed'
 import LanguageSwitcher from './components/LanguageSwitcher'
 import ShareInfoModal, { ShareButton } from './components/ShareInfoModal'
 import FoxyLogo from './components/FoxyLogo'
-import { isAuthenticated, setAuthCookie } from './utils/auth'
 import { 
   DRONE_TYPES, 
   DRONE_TYPE_LABELS_SHORT,
@@ -372,16 +371,8 @@ function Dashboard() {
     setActivateModalDrone(droneId)
     setActivatePasskey('')
     setActivateError(null)
-    
-    // If already authenticated, skip password and start activation immediately
-    if (isAuthenticated()) {
-      console.log('[ACTIVATE] Already authenticated, skipping password')
-      setSkipPasswordForm(true)
-      // Start activation after a brief delay to show modal
-      setTimeout(() => startActivation(droneId), 100)
-    } else {
-      setSkipPasswordForm(false)
-    }
+    setSkipPasswordForm(true)
+    setTimeout(() => startActivation(droneId), 100)
   }
   
   // Handle activation password submit
@@ -407,7 +398,6 @@ function Dashboard() {
       
       if (data.success) {
         console.log('[ACTIVATE] Password valid for drone:', activateModalDrone)
-        setAuthCookie() // Save authentication for 1 hour
         setActivateLoading(false)
         await startActivation(activateModalDrone)
       } else {
@@ -630,7 +620,7 @@ function Dashboard() {
   }, [])
   
   const handleDroneClick = useCallback((droneId) => {
-    navigate(`/drone/${droneId}`)
+    navigate(`/dashboard?slave=${encodeURIComponent(droneId)}`)
   }, [navigate])
   
   // Only show drones with profiles (connected drones)
@@ -789,4 +779,3 @@ function Dashboard() {
 }
 
 export default Dashboard
-

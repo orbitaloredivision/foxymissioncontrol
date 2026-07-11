@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import config from './config'
 import { DRONE_TYPES, DRONE_TYPE_LABEL_KEYS } from './telemetrySchemas'
 import { formatAppVersion, useAppVersion } from './hooks/useAppVersion'
+import { ControllerSettingsPanel } from './ControlSettings'
 import './DroneProfileEditor.css'
 import './Dashboard.css'
 
@@ -178,7 +179,17 @@ const defaultProfile = {
   rearCameraUrl: '',
   color: '#00ff88',
   crsf_speed: null,
-  crsf2_speed: null
+  crsf2_speed: null,
+  wireguard: {
+    enabled: false,
+    clientAddress: '',
+    clientPublicKey: '',
+    endpoint: '',
+    masterAddress: '10.77.0.1/16',
+    masterPublicKey: '',
+    routedSubnet: '',
+    persistentKeepalive: 25
+  }
 }
 
 // Camera Scanner Modal Component
@@ -869,7 +880,8 @@ function ProfileForm({ droneId, profile, onSave, onCancel, onDelete, saveError }
   const { t } = useTranslation()
   const [formData, setFormData] = useState({
     ...defaultProfile,
-    ...profile
+    ...profile,
+    wireguard: { ...defaultProfile.wireguard, ...(profile?.wireguard || {}) }
   })
   const [saving, setSaving] = useState(false)
   
@@ -883,6 +895,22 @@ function ProfileForm({ droneId, profile, onSave, onCancel, onDelete, saveError }
     setFormData(prev => ({
       ...prev,
       [field]: raw === '' ? null : parseInt(raw, 10)
+    }))
+  }
+
+  const handleWireGuardChange = (e) => {
+    const { name, value, type, checked } = e.target
+    setFormData(prev => ({
+      ...prev,
+      wireguard: {
+        ...prev.wireguard,
+        [name]: type === 'checkbox' ? checked : (name === 'persistentKeepalive' ? (value === '' ? 0 : parseInt(value, 10)) : value),
+        ...(
+          type !== 'checkbox' && ['clientPublicKey', 'endpoint'].includes(name) && value.trim()
+            ? { enabled: true }
+            : {}
+        )
+      }
     }))
   }
   
@@ -1005,6 +1033,65 @@ function ProfileForm({ droneId, profile, onSave, onCancel, onDelete, saveError }
         </div>
         <span className="form-hint">{t('profile.crsfSpeedHint')}</span>
       </div>
+
+      <div className="form-group">
+        <label htmlFor={`wg-enabled-${droneId}`}>
+          <input id={`wg-enabled-${droneId}`} name="enabled" type="checkbox" checked={formData.wireguard?.enabled === true} onChange={handleWireGuardChange} />
+          {' '}{t('profile.wireguardEnabled')}
+        </label>
+        <span className="form-hint">{t('profile.wireguardHint')}</span>
+        <span className="form-hint">
+          {formData.wireguard?.enabled
+            ? t('profile.wireguardStatusEnabled')
+            : formData.wireguard?.configured
+              ? t('profile.wireguardStatusSaved')
+              : t('profile.wireguardStatusDisabled')}
+        </span>
+        {saveError && <div className="form-error save-profile-error">⚠ {saveError}</div>}
+      </div>
+
+      <div className="form-group">
+        <label htmlFor={`wg-address-${droneId}`}>{t('profile.wireguardClientAddress')}</label>
+        <input id={`wg-address-${droneId}`} name="clientAddress" type="text" value={formData.wireguard?.clientAddress || t('profile.wireguardAutoAddress')} readOnly />
+      </div>
+
+      <div className="form-group">
+        <label htmlFor={`wg-master-address-${droneId}`}>{t('profile.wireguardMasterAddress')}</label>
+        <input id={`wg-master-address-${droneId}`} name="masterAddress" type="text" value={formData.wireguard?.masterAddress || '10.77.0.1/16'} readOnly />
+        <span className="form-hint">{t('profile.wireguardMasterRouteHint')}</span>
+      </div>
+
+      <div className="form-group">
+        <label htmlFor={`wg-client-key-${droneId}`}>{t('profile.wireguardClientPublicKey')}</label>
+        <input id={`wg-client-key-${droneId}`} name="clientPublicKey" type="text" value={formData.wireguard?.clientPublicKey || ''} onChange={handleWireGuardChange} required={formData.wireguard?.enabled === true} />
+      </div>
+
+      <div className="form-group">
+        <label htmlFor={`wg-endpoint-${droneId}`}>{t('profile.wireguardServerEndpoint')}</label>
+        <input id={`wg-endpoint-${droneId}`} name="endpoint" type="text" value={formData.wireguard?.endpoint || formData.wireguard?.serverEndpoint || ''} onChange={handleWireGuardChange} placeholder="203.0.113.10 або 203.0.113.10:51820" required={formData.wireguard?.enabled === true} />
+        <span className="form-hint">{t('profile.wireguardEndpointHint')}</span>
+      </div>
+
+      <div className="form-group">
+        <label htmlFor={`wg-server-key-${droneId}`}>{t('profile.wireguardServerPublicKey')}</label>
+        <input id={`wg-server-key-${droneId}`} name="masterPublicKey" type="text" value={formData.wireguard?.masterPublicKey || ''} readOnly />
+      </div>
+
+      <div className="form-group crsf-speed-group">
+        <label htmlFor={`wg-allowed-${droneId}`}>{t('profile.wireguardAllowedIps')}</label>
+        <div className="crsf-speed-row">
+          <input id={`wg-allowed-${droneId}`} name="routedSubnet" type="text" value={formData.wireguard?.routedSubnet || ''} onChange={handleWireGuardChange} placeholder="192.168.88.0/24" />
+          <input id={`wg-keepalive-${droneId}`} name="persistentKeepalive" type="number" min="0" max="65535" value={formData.wireguard?.persistentKeepalive ?? 25} onChange={handleWireGuardChange} placeholder="25" />
+        </div>
+        <span className="form-hint">{t('profile.wireguardAllowedIpsHint')}</span>
+      </div>
+
+      {formData.wireguard?.clientAddress && formData.wireguard?.masterPublicKey && (
+        <div className="form-group">
+          <label>{t('profile.wireguardMikrotikConfig')}</label>
+          <textarea readOnly rows="6" value={`/interface wireguard peers add interface=wireguard1 public-key="${formData.wireguard.masterPublicKey}" allowed-address=${String(formData.wireguard.masterAddress || '10.77.0.1/16').split('/')[0]}/32\n/ip address add address=${formData.wireguard.clientAddress} interface=wireguard1\n/ip route add dst-address=${String(formData.wireguard.masterAddress || '10.77.0.1/16').split('/')[0]}/32 gateway=wireguard1\n# MikroTik listen-port must match ${formData.wireguard.endpoint || 'the configured endpoint port'}`} />
+        </div>
+      )}
       
       <div className="form-group">
         <label htmlFor={`frontCamera-${droneId}`}>{t('profile.frontCameraUrlSd')}</label>
@@ -1360,28 +1447,10 @@ function MediaMTXPanel({ profiles = {} }) {
   )
 }
 
-// Import shared auth utilities
-import { isAuthenticated as checkAuthCookie, setAuthCookie, clearAuthCookie } from './utils/auth'
-
 function DroneProfileEditor() {
   const { t } = useTranslation()
   const { versionLabel } = useAppVersion()
   const navigate = useNavigate()
-  
-  // Authentication state - default to false, check cookie on mount
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [authChecked, setAuthChecked] = useState(false)
-  const [authPasskey, setAuthPasskey] = useState('')
-  const [authError, setAuthError] = useState(null)
-  const [authLoading, setAuthLoading] = useState(false)
-  
-  // Check auth cookie on mount
-  useEffect(() => {
-    const hasAuth = checkAuthCookie()
-    console.log('[AUTH] Cookie check:', hasAuth)
-    setIsAuthenticated(hasAuth)
-    setAuthChecked(true)
-  }, [])
   
   const [profiles, setProfiles] = useState({})
   const [droneIds, setDroneIds] = useState([])
@@ -2346,106 +2415,6 @@ function DroneProfileEditor() {
     }
   }
   
-  // Authentication handler
-  const handleAuthSubmit = async (e) => {
-    e.preventDefault()
-    
-    if (!authPasskey.trim()) {
-      setAuthError(t('auth.passkeyRequired'))
-      return
-    }
-    
-    setAuthLoading(true)
-    setAuthError(null)
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passkey: authPasskey.trim() })
-      })
-      
-      const data = await response.json()
-      
-      if (data.success) {
-        setAuthCookie()
-        setIsAuthenticated(true)
-        setAuthPasskey('')
-        setAuthError(null)
-      } else {
-        setAuthError(t('auth.invalidPasskey'))
-      }
-    } catch (error) {
-      console.error('Auth error:', error)
-      setAuthError(t('auth.authError'))
-    } finally {
-      setAuthLoading(false)
-    }
-  }
-  
-  // Logout handler
-  const handleLogout = () => {
-    clearAuthCookie()
-    setIsAuthenticated(false)
-  }
-  
-  // Wait for auth check to complete
-  if (!authChecked) {
-    return (
-      <div className="profile-editor loading">
-        <div className="loading-spinner">◌</div>
-      </div>
-    )
-  }
-  
-  // Auth check FIRST - before anything else
-  if (!isAuthenticated) {
-    return (
-      <div className="profile-editor">
-        <header className="editor-header">
-          <div className="header-left">
-            <Link to="/" className="back-btn">← {t('nav.backToDashboard')}</Link>
-            <h1>{t('settings.title')}</h1>
-          </div>
-        </header>
-        
-        <div className="auth-container">
-          <div className="auth-card">
-            <div className="auth-icon">🔐</div>
-            <h2>{t('auth.title')}</h2>
-            <p className="auth-subtitle">{t('auth.subtitle')}</p>
-            
-            <form className="auth-form" onSubmit={handleAuthSubmit}>
-              <div className="auth-input-group">
-                <input
-                  type="password"
-                  className="auth-input"
-                  placeholder={t('auth.passkeyPlaceholder')}
-                  value={authPasskey}
-                  onChange={(e) => setAuthPasskey(e.target.value)}
-                  disabled={authLoading}
-                  autoFocus
-                />
-              </div>
-              
-              {authError && (
-                <div className="auth-error">{authError}</div>
-              )}
-              
-              <button 
-                type="submit" 
-                className={`auth-submit-btn ${authLoading ? 'loading' : ''}`}
-                disabled={authLoading || !authPasskey.trim()}
-              >
-                {authLoading ? t('auth.verifying') : t('auth.unlock')}
-              </button>
-            </form>
-          </div>
-        </div>
-      </div>
-    )
-  }
-  
   if (loading) {
     return (
       <div className="profile-editor loading">
@@ -2469,11 +2438,6 @@ function DroneProfileEditor() {
           <Link to="/" className="back-btn">← {t('nav.backToDashboard')}</Link>
           <h1>{t('settings.title')}</h1>
         </div>
-        <div className="header-right">
-          <button className="logout-btn" onClick={handleLogout} title={t('auth.logout')}>
-            🔓
-          </button>
-        </div>
       </header>
       
       {/* Tab Navigation */}
@@ -2492,12 +2456,11 @@ function DroneProfileEditor() {
             {t('settings.detectedTab')} ({detectedDrones.length})
           </button>
         )}
-        <button 
-          className={`tab-btn ${activeTab === 'discover' ? 'active' : ''}`}
-          onClick={() => setActiveTab('discover')}
+        <button
+          className={`tab-btn ${activeTab === 'control' ? 'active' : ''}`}
+          onClick={() => setActiveTab('control')}
         >
-          {t('settings.discoverTab')}
-          {isPairingAny && <span className="tab-badge pairing">●</span>}
+          🎮 Пульт
         </button>
         <button 
           className={`tab-btn ${activeTab === 'cameras' ? 'active' : ''}`}
@@ -2622,6 +2585,16 @@ function DroneProfileEditor() {
                         <div className="detail-row">
                           <span className="detail-label">{t('profile.droneId')}:</span>
                           <span className="detail-value drone-id-value">{droneId}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">WireGuard:</span>
+                          <span className="detail-value">
+                            {profile.wireguard?.enabled
+                              ? `✓ ${profile.wireguard.clientAddress || ''} → ${profile.wireguard.endpoint || ''}`
+                              : profile.wireguard?.configured
+                                ? t('profile.wireguardStatusSaved')
+                                : t('profile.wireguardStatusDisabled')}
+                          </span>
                         </div>
                         <div className="detail-row camera-row">
                           <span className="detail-label">{t('profile.frontCamera')}:</span>
@@ -2782,7 +2755,14 @@ function DroneProfileEditor() {
       )}
       
       {/* TAB: Discover & Pair */}
-      {activeTab === 'discover' && (
+      {activeTab === 'control' && (
+        <div className="tab-content">
+          <ControllerSettingsPanel />
+        </div>
+      )}
+
+      {/* TAB: Discover & Pair */}
+      {false && activeTab === 'discover' && (
         <div className="tab-content">
           <section className="discover-section">
             <div className="discover-header">
@@ -3361,4 +3341,3 @@ function DroneProfileEditor() {
 }
 
 export default DroneProfileEditor
-

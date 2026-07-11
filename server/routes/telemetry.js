@@ -4,19 +4,21 @@
  * - GET /api/drones/active - Get active drone status
  */
 import express from 'express';
+import fs from 'fs';
 import { getDb } from '../lib/database.js';
+import { getUserSlaves, userHasSlave } from '../lib/userDatabase.js';
 
 const router = express.Router();
+const ACTIVE_FILE_PATH = '/dev/shm/active';
 
 /**
  * GET /api/drones/active
  * Get the current active control status for all drones
  * 
  * EXCLUSIVE ACTIVE CONTROL: Only ONE drone can be active at a time.
- * The drone with the most recent active=1 telemetry (within 10 seconds) wins.
- * All other drones are marked as inactive.
- * 
- * Active timeout: 10 seconds (if no active telemetry in 10s, drone loses active status)
+ * `/dev/shm/active` is the same authoritative selection used by Master.
+ * Control must become active before telemetry, otherwise USB TX16 control and
+ * Slave telemetry wait for each other forever.
  */
 router.get('/drones/active', (req, res) => {
   const db = getDb();
@@ -25,20 +27,6 @@ router.get('/drones/active', (req, res) => {
   }
 
   try {
-    const ACTIVE_TIMEOUT_MS = 10000; // 10 seconds for active control timeout
-    const cutoffTime = Date.now() - ACTIVE_TIMEOUT_MS;
-    
-    // Find the most recent telemetry record with active=1 within the timeout window
-    // This ensures only ONE drone can be marked as active (the most recent one)
-    const activeStmt = db.prepare(`
-      SELECT drone_id, timestamp
-      FROM telemetry
-      WHERE active = 1 AND timestamp > ?
-      ORDER BY timestamp DESC
-      LIMIT 1
-    `);
-    const activeRow = activeStmt.get(cutoffTime);
-    
     // Get all drones that have recent telemetry (for reference)
     const allDronesStmt = db.prepare(`
       SELECT drone_id, MAX(timestamp) as lastUpdate
@@ -52,21 +40,27 @@ router.get('/drones/active', (req, res) => {
     `);
     const allDrones = allDronesStmt.all();
     
-    // Build response: only the most recent active drone gets active=true
+    // Build response: only the drone selected in Master's active file is active.
     const activeDrones = {};
-    const currentlyActiveDroneId = activeRow ? activeRow.drone_id : null;
-    
-    allDrones.forEach(row => {
-      activeDrones[row.drone_id] = {
-        active: row.drone_id === currentlyActiveDroneId,
-        lastUpdate: row.lastUpdate
+    let currentlyActiveDroneId = null;
+    try { currentlyActiveDroneId = fs.readFileSync(ACTIVE_FILE_PATH, 'utf8').trim() || null; }
+    catch { /* no drone selected yet */ }
+
+    const allowedSlaves = getUserSlaves(req.user.id);
+    const lastUpdates = new Map(allDrones.map(row => [String(row.drone_id), row.lastUpdate]));
+    const allowedIds = new Set(allowedSlaves.map(s => String(s.id)));
+    allowedSlaves.forEach(slave => {
+      const id = String(slave.id);
+      activeDrones[id] = {
+        active: id === String(currentlyActiveDroneId),
+        lastUpdate: lastUpdates.get(id) || null
       };
     });
 
     res.json({
       success: true,
       activeDrones,
-      currentlyActive: currentlyActiveDroneId // Which drone currently has joystick control
+      currentlyActive: allowedIds.has(String(currentlyActiveDroneId)) ? currentlyActiveDroneId : null
     });
 
   } catch (error) {
@@ -93,6 +87,8 @@ router.get('/telemetry', (req, res) => {
     const lastId = parseInt(req.query.lastId) || 0;
     const limit = parseInt(req.query.limit) || 100;
     const droneId = req.query.droneId || null;
+    if (!droneId) return res.status(400).json({ error: 'droneId is required' });
+    if (!userHasSlave(req.user.id, droneId)) return res.status(403).json({ error: 'Forbidden' });
 
     let rows;
     if (droneId !== null) {
@@ -169,5 +165,3 @@ router.get('/telemetry', (req, res) => {
 });
 
 export default router;
-
-

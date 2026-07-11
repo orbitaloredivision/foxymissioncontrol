@@ -1,58 +1,39 @@
-/**
- * Authentication API routes
- * - POST /api/auth/verify - Verify passkey
- */
 import express from 'express';
-import crypto from 'crypto';
-import fs from 'fs/promises';
+import bcrypt from 'bcryptjs';
+import { createSession, deleteSession, getUsersDb } from '../lib/userDatabase.js';
+import { parseCookies, requireUser, SESSION_COOKIE } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// MD5 hash of master password "NiceTryBuddy"
-const MASTER_PASSWORD_HASH = '969db0859b0bb7ba866b4da0768d6607';
+function cookieOptions(req, maxAge) {
+  const secure = req.secure || req.get('x-forwarded-proto') === 'https';
+  return { httpOnly: true, secure, sameSite: 'strict', path: '/', maxAge };
+}
 
-// Path to the auto-generated code file
-const CODE_FILE_PATH = '/dev/shm/code';
-
-/**
- * POST /api/auth/verify
- * Verify passkey against master password or OTP code
- * Body: { passkey: string }
- * Returns: { success: boolean, error?: string }
- */
-router.post('/verify', async (req, res) => {
-  const { passkey } = req.body;
-  
-  if (!passkey || typeof passkey !== 'string') {
-    return res.status(400).json({ success: false, error: 'Passkey is required' });
+router.post('/login', async (req, res) => {
+  const username = String(req.body?.username || '').trim();
+  const password = String(req.body?.password || '');
+  const user = getUsersDb().prepare('SELECT * FROM users WHERE username=? COLLATE NOCASE').get(username);
+  if (!user || !user.active || !(await bcrypt.compare(password, user.password_hash))) {
+    return res.status(401).json({ success: false, error: 'Невірний логін або пароль' });
   }
-  
-  const trimmedPasskey = passkey.trim();
-  
-  // First, check if MD5 hash matches master password
-  const passkeyHash = crypto.createHash('md5').update(trimmedPasskey).digest('hex');
-  
-  if (passkeyHash === MASTER_PASSWORD_HASH) {
-    // Master password matched
-    return res.json({ success: true, method: 'master' });
-  }
-  
-  // If master password doesn't match, try reading OTP from file
-  try {
-    const otpCode = await fs.readFile(CODE_FILE_PATH, 'utf-8');
-    const trimmedOtp = otpCode.trim();
-    
-    if (trimmedPasskey === trimmedOtp) {
-      // OTP matched
-      return res.json({ success: true, method: 'otp' });
-    }
-  } catch (err) {
-    // File might not exist or be unreadable
-    console.warn('Could not read OTP code file:', err.message);
-  }
-  
-  // Neither matched
-  return res.json({ success: false, error: 'Invalid passkey' });
+  const session = createSession(user.id);
+  res.cookie(SESSION_COOKIE, session.token, cookieOptions(req, session.expiresAt - Date.now()));
+  res.json({ success: true, username: user.username });
 });
+
+router.post('/logout', (req, res) => {
+  deleteSession(parseCookies(req)[SESSION_COOKIE]);
+  res.clearCookie(SESSION_COOKIE, cookieOptions(req, 0));
+  res.json({ success: true });
+});
+
+router.get('/session', requireUser, (req, res) => {
+  res.json({ success: true, user: { id: req.user.id, username: req.user.username } });
+});
+
+// Kept for compatibility with older frontend builds. Login session is enough;
+// the physical Master passcode is no longer required.
+router.post('/verify', requireUser, (req, res) => res.json({ success: true, method: 'session' }));
 
 export default router;

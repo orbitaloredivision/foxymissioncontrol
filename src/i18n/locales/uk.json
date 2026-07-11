@@ -237,7 +237,23 @@
     "droneConfFailed": "Скрипт конфігурації дрона не виконався",
     "deleteProfile": "Видалити профіль",
     "deleteConfirm": "Ви впевнені, що хочете видалити профіль дрона #{{id}}?",
-    "open": "Відкрити →"
+    "open": "Відкрити →",
+    "wireguardEnabled": "Увімкнути WireGuard для цього дрона",
+    "wireguardHint": "Master автоматично видає унікальну tunnel IP зі спільного пулу 10.77.0.0/16.",
+    "wireguardClientAddress": "Автоматична WireGuard-адреса MikroTik",
+    "wireguardAutoAddress": "Буде видана після збереження",
+    "wireguardMasterAddress": "WireGuard-адреса Master",
+    "wireguardMasterRouteHint": "На MikroTik використовуйте 10.77.0.1/32 як Allowed Address і dst-address маршруту.",
+    "wireguardClientPublicKey": "Публічний ключ MikroTik",
+    "wireguardServerEndpoint": "Публічна адреса Starlink/MikroTik",
+    "wireguardServerPublicKey": "Публічний ключ Master",
+    "wireguardAllowedIps": "Allowed addresses за MikroTik / Keepalive",
+    "wireguardAllowedIpsHint": "Можна вказати декілька адрес або підмереж через кому, наприклад: 10.77.0.10/32, 10.77.0.8/32",
+    "wireguardMikrotikConfig": "Готовий конфіг MikroTik",
+    "wireguardStatusEnabled": "Стан: увімкнено, після збереження peer буде застосований на Master.",
+    "wireguardStatusSaved": "Стан: дані збережені, але peer вимкнений.",
+    "wireguardStatusDisabled": "Стан: WireGuard не налаштований.",
+    "wireguardEndpointHint": "Можна ввести лише публічну IP/назву — порт 51820 буде додано автоматично."
   },
   
   "discover": {
@@ -418,4 +434,3 @@
     "switchToFill": "Перемкнути на fill (розтягнути на екран)"
   }
 }
-

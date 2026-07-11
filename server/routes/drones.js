@@ -8,6 +8,7 @@ import express from 'express';
 import fs from 'fs';
 import { getDb } from '../lib/database.js';
 import { loadProfiles, getAllDroneIds } from '../lib/profiles.js';
+import { getUserSlaves, userHasSlave } from '../lib/userDatabase.js';
 
 const ELRS_FILE_PATH = '/dev/shm/elrs';
 const ELRS_FRESHNESS_MS = 5000; // File must be updated within 5 seconds
@@ -32,7 +33,8 @@ router.get('/drones', (req, res) => {
     
     // Load profiles to check which drones are configured
     // getAllDroneIds returns array of droneId strings
-    const configuredIds = getAllDroneIds();
+    const allowedIds = new Set(getUserSlaves(req.user.id).map(s => String(s.id)));
+    const configuredIds = getAllDroneIds().filter(id => allowedIds.has(String(id)));
     
     // Single optimized query: Get recent drone IDs with their latest battery data
     // Uses json_extract for exact type matching (types: gps, batt, state)
@@ -52,7 +54,7 @@ router.get('/drones', (req, res) => {
       ) latest ON t.ID = latest.max_id
       ORDER BY t.drone_id ASC
     `);
-    const recentRows = recentDronesStmt.all(cutoffTime);
+    const recentRows = recentDronesStmt.all(cutoffTime).filter(r => allowedIds.has(String(r.drone_id)));
     
     // All recently active drone IDs (for reference)
     const droneIds = recentRows.map(r => r.drone_id);
@@ -100,6 +102,7 @@ router.get('/drones', (req, res) => {
  */
 router.get('/drone/:droneId/has-telemetry', (req, res) => {
   const { droneId } = req.params;
+  if (!userHasSlave(req.user.id, droneId)) return res.status(403).json({ error: 'Forbidden' });
   
   const db = getDb();
   if (!db) {
@@ -140,6 +143,7 @@ router.post('/drones/activate', (req, res) => {
       error: 'droneId is required' 
     })
   }
+  if (!userHasSlave(req.user.id, droneId)) return res.status(403).json({ error: 'Forbidden' });
   
   try {
     const ACTIVE_FILE_PATH = '/dev/shm/active'

@@ -1,0 +1,5 @@
+[Interface]
+Address = 10.77.0.1/16
+PrivateKey = __PRIVATE_KEY__
+ListenPort = 51820
+SaveConfig = false

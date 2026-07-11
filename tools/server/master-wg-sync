@@ -1,0 +1,43 @@
+#!/usr/bin/python3
+import ipaddress, json, os, subprocess, tempfile
+
+PATH = '/home/orangepi/guidashboard/wireguard-peers.json'
+if os.path.islink(PATH): raise SystemExit('symlink refused')
+st = os.stat(PATH)
+if st.st_uid != 1000 or (st.st_mode & 0o022): raise SystemExit('unsafe peers file')
+with open(PATH, encoding='utf-8') as f: data = json.load(f)
+if data.get('interface') != 'wg0': raise SystemExit('invalid interface')
+peers = data.get('peers', [])
+networks, keys, endpoints = [], set(), set()
+for p in peers:
+    address = ipaddress.ip_network(p['wg_address'], strict=True)
+    if not address.subnet_of(ipaddress.ip_network('10.77.0.0/16')) or address.prefixlen != 32: raise SystemExit('invalid tunnel address')
+    allowed = [address]
+    routed_values = [value.strip() for value in str(p.get('wg_routed_subnet') or '').split(',') if value.strip()]
+    for value in routed_values:
+        allowed.append(ipaddress.ip_network(value, strict=True))
+    for n in allowed:
+        if any(n.overlaps(old) for old in networks): raise SystemExit('overlapping AllowedIPs')
+        networks.append(n)
+    if p['wg_public_key'] in keys or p['wg_endpoint'] in endpoints: raise SystemExit('duplicate key or endpoint')
+    keys.add(p['wg_public_key']); endpoints.add(p['wg_endpoint'])
+
+current = subprocess.run(['wg','show','wg0','peers'], text=True, capture_output=True, check=True).stdout.split()
+for key in current: subprocess.run(['wg','set','wg0','peer',key,'remove'], check=True)
+
+# `wg set` updates cryptokey routing but does not create Linux routes (unlike wg-quick).
+# Rebuild only the static routes managed by this script.
+static_routes = subprocess.run(
+    ['ip', '-o', 'route', 'show', 'dev', 'wg0', 'proto', 'static'],
+    text=True, capture_output=True, check=True
+).stdout.splitlines()
+for route in static_routes:
+    destination = route.split()[0]
+    subprocess.run(['ip', 'route', 'del', destination, 'dev', 'wg0', 'proto', 'static'], check=True)
+
+for p in peers:
+    routed_values = [value.strip() for value in str(p.get('wg_routed_subnet') or '').split(',') if value.strip()]
+    allowed = ','.join([p['wg_address'], *routed_values])
+    subprocess.run(['wg','set','wg0','peer',p['wg_public_key'],'endpoint',p['wg_endpoint'],'allowed-ips',allowed,'persistent-keepalive',str(p.get('wg_keepalive') or 25)], check=True)
+    for destination in routed_values:
+        subprocess.run(['ip', 'route', 'replace', destination, 'dev', 'wg0', 'proto', 'static'], check=True)

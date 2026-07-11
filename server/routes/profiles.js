@@ -12,6 +12,9 @@
  */
 import express from 'express';
 import { loadProfiles, saveProfiles, getProfilesAsObject } from '../lib/profiles.js';
+import { getUserSlaves, getUsersDb, userHasSlave } from '../lib/userDatabase.js';
+import { configureSlaveWireGuard, masterPublicKey } from '../lib/wireguard.js';
+import { config } from '../config.js';
 
 const router = express.Router();
 
@@ -22,14 +25,34 @@ const router = express.Router();
  */
 router.get('/profiles', (req, res) => {
   const profiles = loadProfiles();
+  const allowedIds = new Set(getUserSlaves(req.user.id).map(s => String(s.id)));
+  const wgRows = new Map(getUsersDb().prepare('SELECT * FROM slaves').all().map(s => [String(s.id), s]));
+  const enrich = drone => {
+    if (!drone) return drone;
+    const row = wgRows.get(String(drone.droneId)) || {};
+    return {
+      ...drone,
+      wireguard: {
+        enabled: row.wg_enabled === 1,
+        configured: Boolean(row.wg_endpoint && row.wg_public_key),
+        clientAddress: row.wg_address || '',
+        clientPublicKey: row.wg_public_key || '',
+        endpoint: row.wg_endpoint || '',
+        routedSubnet: row.wg_routed_subnet || '',
+        persistentKeepalive: row.wg_keepalive || 25,
+        masterAddress: config.wireguardMasterAddress,
+        masterPublicKey: masterPublicKey()
+      }
+    };
+  };
   
   // Build object keyed by droneId
   // Array index IS the position (_index)
   const profilesObj = {};
   profiles.drones.forEach((drone, index) => {
-    if (drone) {
+    if (drone && allowedIds.has(String(drone.droneId))) {
       profilesObj[drone.droneId] = {
-        ...drone,
+        ...enrich(drone),
         _index: index // Array index = display position - 1
       };
     }
@@ -38,7 +61,7 @@ router.get('/profiles', (req, res) => {
   res.json({
     success: true,
     profiles: profilesObj,
-    profilesArray: profiles.drones // Also return the array for reference
+    profilesArray: profiles.drones.map(d => d && allowedIds.has(String(d.droneId)) ? enrich(d) : null)
   });
 });
 
@@ -50,6 +73,8 @@ router.get('/profiles', (req, res) => {
  * Slot numbers are 1-indexed (1-6), converted to array indices (0-5)
  */
 router.post('/profiles/reorder', (req, res) => {
+  return res.status(403).json({ error: 'Settings are local-only' });
+  /* local settings route retained below */
   const { sourceSlot, targetSlot } = req.body;
   
   console.log(`Reorder request: position ${sourceSlot} -> position ${targetSlot}`);
@@ -94,7 +119,12 @@ router.post('/profiles/reorder', (req, res) => {
  */
 router.post('/profiles/:droneId', (req, res) => {
   const droneId = req.params.droneId;
-  const profileData = req.body;
+  if (!userHasSlave(req.user.id, droneId)) return res.status(403).json({ error: 'Forbidden' });
+  const profileData = { ...req.body };
+  if (profileData.wireguard && typeof profileData.wireguard === 'object') {
+    try { profileData.wireguard = configureSlaveWireGuard(droneId, profileData.wireguard); }
+    catch (error) { return res.status(400).json({ error: error.message }); }
+  }
   
   console.log(`Saving profile for drone ${droneId}:`, JSON.stringify(profileData));
   
@@ -152,6 +182,8 @@ router.post('/profiles/:droneId', (req, res) => {
  * Delete a drone profile (sets slot to null)
  */
 router.delete('/profiles/:droneId', (req, res) => {
+  return res.status(403).json({ error: 'Settings are local-only' });
+  /* local settings route retained below */
   const droneId = req.params.droneId;
   
   const profiles = loadProfiles();

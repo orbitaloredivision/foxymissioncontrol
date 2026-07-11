@@ -3,6 +3,7 @@
  * Main entry point - Express app setup and server startup
  */
 import express from 'express';
+import http from 'http';
 import cors from 'cors';
 import { config } from './config.js';
 
@@ -25,26 +26,34 @@ import camerasRouter from './routes/cameras.js';
 import mediamtxRouter from './routes/mediamtx.js';
 import authRouter from './routes/auth.js';
 import upgradeRouter from './routes/upgrade.js';
+import pagesRouter from './routes/pages.js';
+import { requireUser } from './middleware/auth.js';
+import { startAdmin } from './admin.js';
+import { seedSlavesFromProfiles } from './lib/userDatabase.js';
+import { loadProfiles } from './lib/profiles.js';
+import { attachControlWebSocket } from './lib/crsfControl.js';
 
 // Initialize Express app
 const app = express();
+seedSlavesFromProfiles(loadProfiles());
+app.set('trust proxy', true);
 
 // CORS configuration
-app.use(cors({
-  origin: config.corsOrigin
-}));
+app.use(cors({ origin: config.corsOrigin, credentials: true }));
 
 // JSON body parser
 app.use(express.json());
 
 // Mount API routes
+app.use('/api/auth', authRouter);
+app.use(pagesRouter);
+app.use('/api', requireUser);
 app.use('/api', dronesRouter);
 app.use('/api', profilesRouter);
 app.use('/api', telemetryRouter);
 app.use('/api', discoveryRouter);
 app.use('/api', camerasRouter);
 app.use('/api', mediamtxRouter);
-app.use('/api/auth', authRouter);
 app.use('/api/upgrade', upgradeRouter);
 
 // Health check endpoint
@@ -60,10 +69,13 @@ app.get('/api/health', (req, res) => {
 });
 
 // Start server
-app.listen(config.port, () => {
+const server = http.createServer(app);
+attachControlWebSocket(server);
+server.listen(config.port, () => {
   console.log(`Telemetry server running on port ${config.port}`);
   connectDatabase();
 });
+startAdmin(config.adminHost, config.adminPort);
 
 // Graceful shutdown
 process.on('SIGINT', () => {
