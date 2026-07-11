@@ -86,22 +86,45 @@ function readMappedChannels(gamepad, mapping) {
   return channels
 }
 
+function readKeyboardChannels(keys) {
+  const channels = Array(16).fill(1500)
+  if (keys.has('KeyW') || keys.has('ArrowUp')) channels[0] = 2000
+  if (keys.has('KeyS') || keys.has('ArrowDown')) channels[0] = 1000
+  if (keys.has('KeyA') || keys.has('ArrowLeft')) channels[1] = 1000
+  if (keys.has('KeyD') || keys.has('ArrowRight')) channels[1] = 2000
+  return channels
+}
+
 export function useTx16Control(slaveId, enabled) {
   const [state, setState] = useState('disconnected')
   const [gamepadConnected, setGamepadConnected] = useState(false)
   const socketRef = useRef(null)
-  const [mapping, setMapping] = useState(null)
+  const keysRef = useRef(new Set())
+  const [controllerConfig, setControllerConfig] = useState({ mapping: null, mode: 'gamepad', autoConnect: false, slaveId: null })
 
   useEffect(() => {
     let mounted = true
     const load = () => fetch('/api/auth/controller-settings')
       .then(response => response.json())
-      .then(data => { if (mounted) setMapping(Array.isArray(data.config?.mapping) ? data.config.mapping : null) })
+      .then(data => { if (mounted && data.config) setControllerConfig({ mapping: Array.isArray(data.config.mapping) ? data.config.mapping : null, mode: data.config.mode || 'gamepad', autoConnect: data.config.autoConnect === true, slaveId: data.config.slaveId ? String(data.config.slaveId) : null }) })
       .catch(() => {})
     load()
     addEventListener('focus', load)
     return () => { mounted = false; removeEventListener('focus', load) }
   }, [])
+
+  useEffect(() => {
+    const update = (event, down) => {
+      if (!['KeyW','KeyS','KeyA','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.code)) return
+      event.preventDefault()
+      down ? keysRef.current.add(event.code) : keysRef.current.delete(event.code)
+    }
+    const down = event => update(event, true), up = event => update(event, false), clear = () => keysRef.current.clear()
+    addEventListener('keydown', down); addEventListener('keyup', up); addEventListener('blur', clear)
+    return () => { removeEventListener('keydown', down); removeEventListener('keyup', up); removeEventListener('blur', clear) }
+  }, [])
+
+  const effectiveEnabled = enabled || (controllerConfig.autoConnect && controllerConfig.slaveId === String(slaveId))
 
   useEffect(() => {
     const update = () => setGamepadConnected([...navigator.getGamepads()].some(Boolean))
@@ -117,7 +140,7 @@ export function useTx16Control(slaveId, enabled) {
   }, [])
 
   useEffect(() => {
-    if (!slaveId || !enabled) {
+    if (!slaveId || !effectiveEnabled) {
       setState('disconnected')
       return undefined
     }
@@ -127,7 +150,7 @@ export function useTx16Control(slaveId, enabled) {
 
     const connect = () => {
       const gamepad = [...navigator.getGamepads()].find(Boolean)
-      if (!gamepad) {
+      if (controllerConfig.mode !== 'keyboard' && !gamepad) {
         setState('no-gamepad')
         timer = setTimeout(connect, 500)
         return
@@ -155,8 +178,11 @@ export function useTx16Control(slaveId, enabled) {
     const sender = setInterval(() => {
       const socket = socketRef.current
       const gamepad = [...navigator.getGamepads()].find(Boolean)
-      if (!gamepad || socket?.readyState !== WebSocket.OPEN) return
-      const channels = readMappedChannels(gamepad, mapping)
+      if (socket?.readyState !== WebSocket.OPEN) return
+      if (controllerConfig.mode !== 'keyboard' && !gamepad) return
+      const channels = controllerConfig.mode === 'keyboard'
+        ? readKeyboardChannels(keysRef.current)
+        : readMappedChannels(gamepad, controllerConfig.mapping)
       if (!channels) {
         setState('invalid-gamepad-state')
         return
@@ -170,7 +196,7 @@ export function useTx16Control(slaveId, enabled) {
       clearInterval(sender)
       socket?.close(1000, 'Page closed')
     }
-  }, [slaveId, enabled, mapping])
+  }, [slaveId, effectiveEnabled, controllerConfig])
 
-  return { state, gamepadConnected }
+  return { state, gamepadConnected, controlConnected: state === 'connected' }
 }

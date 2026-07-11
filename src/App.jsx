@@ -115,7 +115,7 @@ function App() {
   const [latestTelemetryData, setLatestTelemetryData] = useState(null)
   const [isActive, setIsActive] = useState(false) // Whether this drone is actively controlled
   // A green controller icon means this exact drone receives TX16 commands.
-  const { gamepadConnected } = useTx16Control(droneId, isActive)
+  const { gamepadConnected, controlConnected } = useTx16Control(droneId, isActive)
   const [elrsConnected, setElrsConnected] = useState(true) // ELRS or direct USB control status
   const [hdMode, setHdMode] = useState(true) // HD quality mode for main camera (default: HD)
   
@@ -191,7 +191,7 @@ function App() {
         const data = await response.json()
         if (!isMounted) return
         
-        setElrsConnected(data.connected || gamepadConnected)
+        setElrsConnected(data.connected || gamepadConnected || controlConnected)
       } catch (error) {
         if (error.name !== 'AbortError') {
           // On error, assume disconnected
@@ -208,7 +208,7 @@ function App() {
       controller.abort()
       clearInterval(interval)
     }
-  }, [gamepadConnected])
+  }, [gamepadConnected, controlConnected])
   
   // Start activation process (called after auth verified or if already authenticated)
   const startActivation = async () => {
