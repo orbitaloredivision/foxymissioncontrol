@@ -2,6 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 
 export const SEND_INTERVAL_MS = 20
 
+const defaultChannels = () => {
+  const channels = Array(16).fill(1500)
+  channels[2] = 1000
+  channels[8] = 2000
+  channels[9] = 1000
+  channels[10] = 1500
+  channels[12] = 1000
+  channels[13] = 1000
+  return channels
+}
+
 // EdgeTX Advanced USB joystick mapping measured on the user's TX16S.
 // The left horizontal stick, SE and SG are intentionally not used.
 const AXES = {
@@ -41,7 +52,7 @@ export function readChannels(gamepad) {
   )
   if (Object.values(switchValues).some(value => value === null)) return null
 
-  const channels = Array(16).fill(1500)
+  const channels = defaultChannels()
   // Slave expects motion on CH1/CH2.
   channels[0] = axisToUs(gamepad.axes[AXES.leftVertical])
   channels[1] = axisToUs(gamepad.axes[AXES.rightHorizontal])
@@ -69,7 +80,7 @@ function axisToMappedUs(raw, item) {
 
 function readMappedChannels(gamepad, mapping) {
   if (!Array.isArray(mapping) || mapping.length !== 16) return readChannels(gamepad)
-  const channels = Array(16).fill(1500)
+  const channels = defaultChannels()
   mapping.forEach((item, index) => {
     const channel = Number.isInteger(item.channel) ? item.channel : index
     if (channel < 0 || channel > 15) return
@@ -87,7 +98,7 @@ function readMappedChannels(gamepad, mapping) {
 }
 
 function readKeyboardChannels(keys) {
-  const channels = Array(16).fill(1500)
+  const channels = defaultChannels()
   if (keys.has('KeyW') || keys.has('ArrowUp')) channels[0] = 2000
   if (keys.has('KeyS') || keys.has('ArrowDown')) channels[0] = 1000
   if (keys.has('KeyA') || keys.has('ArrowLeft')) channels[1] = 1000

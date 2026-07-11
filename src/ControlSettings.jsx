@@ -5,7 +5,16 @@ import { SEND_INTERVAL_MS } from './hooks/useTx16Control'
 import './ControlSettings.css'
 
 const STORAGE_KEY = 'master-gamepad-mapping-v1'
-const neutral = () => Array(16).fill(1500)
+const neutral = () => {
+  const channels = Array(16).fill(1500)
+  channels[2] = 1000
+  channels[8] = 2000
+  channels[9] = 1000
+  channels[10] = 1500
+  channels[12] = 1000
+  channels[13] = 1000
+  return channels
+}
 const defaultMap = () => Array.from({ length: 16 }, (_, channel) => ({
   channel,
   sourceType: channel < 2 ? 'axis' : 'none',
