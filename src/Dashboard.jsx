@@ -456,13 +456,13 @@ function Dashboard() {
     if (droneIds.length === 0) return
     
     // Online timeout: 1 minute (60000ms) - drone is offline if no data received in this time
-    const ONLINE_TIMEOUT_MS = 60000
+    const ONLINE_TIMEOUT_MS = 7000
     
     const controllers = {}
     let isMounted = true
     
     const fetchDroneTelemetry = async (droneId) => {
-      if (controllers[droneId]) controllers[droneId].abort()
+      if (controllers[droneId]) return
       controllers[droneId] = new AbortController()
       
       try {
@@ -523,6 +523,8 @@ function Dashboard() {
             }
           })
         }
+      } finally {
+        delete controllers[droneId]
       }
       
       // Also check for stale data (no new data in 1 minute = offline)

@@ -32,6 +32,11 @@ db.exec(`
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     expires_at INTEGER NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS controller_settings (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    config_json TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
   CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
 `);
 

@@ -11,6 +11,26 @@ import { getUserSlaves, userHasSlave } from '../lib/userDatabase.js';
 const router = express.Router();
 const ACTIVE_FILE_PATH = '/dev/shm/active';
 
+router.get('/telemetry/status', (req, res) => {
+  const db = getDb();
+  const droneId = req.query.droneId;
+  if (!db) return res.status(500).json({ error: 'Database not connected' });
+  if (!droneId) return res.status(400).json({ error: 'droneId is required' });
+  if (!userHasSlave(req.user.id, droneId)) return res.status(403).json({ error: 'Forbidden' });
+  const rows = db.prepare('SELECT ID,timestamp FROM telemetry WHERE drone_id=? ORDER BY ID DESC LIMIT 60').all(droneId);
+  const gaps = rows.slice(0, -1).map((row, index) => row.timestamp - rows[index + 1].timestamp);
+  res.json({
+    success: true,
+    droneId: String(droneId),
+    lastId: rows[0]?.ID || null,
+    lastTimestamp: rows[0]?.timestamp || null,
+    ageMs: rows[0] ? Math.max(0, Date.now() - rows[0].timestamp) : null,
+    sampleCount: rows.length,
+    averageGapMs: gaps.length ? Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length) : null,
+    maxGapMs: gaps.length ? Math.max(...gaps) : null
+  });
+});
+
 /**
  * GET /api/drones/active
  * Get the current active control status for all drones

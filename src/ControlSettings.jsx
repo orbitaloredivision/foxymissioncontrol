@@ -14,6 +14,7 @@ const defaultMap = () => Array.from({ length: 16 }, (_, channel) => ({
   center: 0,
   max: 1,
   invert: false,
+  buttons: [],
 }))
 
 function loadMap() {
@@ -36,7 +37,14 @@ function mappedChannels(gamepad, mapping) {
   const output = neutral()
   for (const item of mapping) {
     if (item.sourceType === 'axis') output[item.channel] = axisToUs(gamepad.axes[item.sourceIndex] || 0, item)
-    if (item.sourceType === 'button') output[item.channel] = gamepad.buttons[item.sourceIndex]?.pressed ? (item.invert ? 1000 : 2000) : (item.invert ? 2000 : 1000)
+    if (item.sourceType === 'button2' || item.sourceType === 'button3') {
+      const count = item.sourceType === 'button3' ? 3 : 2
+      const active = (item.buttons || []).slice(0, count).findIndex(index => gamepad.buttons[index]?.pressed)
+      const values = count === 3 ? [1000, 1500, 2000] : [1000, 2000]
+      let value = active >= 0 ? values[active] : 1500
+      if (item.invert) value = 3000 - value
+      output[item.channel] = value
+    }
   }
   return output
 }
@@ -56,18 +64,45 @@ export function ControllerSettingsPanel() {
   const [slaveId, setSlaveId] = useState(params.get('slave') || '')
   const [mode, setMode] = useState('gamepad')
   const [enabled, setEnabled] = useState(false)
+  const [autoConnect, setAutoConnect] = useState(false)
   const [connection, setConnection] = useState('disconnected')
   const [gamepadName, setGamepadName] = useState('Не підключений')
   const [channels, setChannels] = useState(neutral)
   const [mapping, setMapping] = useState(loadMap)
-  const [captureChannel, setCaptureChannel] = useState(null)
+  const [capture, setCapture] = useState(null)
+  const [configLoaded, setConfigLoaded] = useState(false)
+  const [saveState, setSaveState] = useState('saved')
   const [calibrating, setCalibrating] = useState(false)
   const calibrationRef = useRef(null)
   const socketRef = useRef(null)
   const keysRef = useRef(new Set())
   const previousInputRef = useRef({ axes: [], buttons: [] })
 
-  useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(mapping)) }, [mapping])
+  useEffect(() => {
+    fetch('/api/auth/controller-settings').then(r => r.json()).then(data => {
+      const serverConfig = data.success && Array.isArray(data.config?.mapping) ? data.config : null
+      if (serverConfig) {
+        setMapping(serverConfig.mapping)
+        if (serverConfig.mode) setMode(serverConfig.mode)
+        if (serverConfig.slaveId) setSlaveId(String(serverConfig.slaveId))
+        if (serverConfig.autoConnect === true) { setAutoConnect(true); setEnabled(true) }
+      }
+      setConfigLoaded(true)
+    }).catch(() => setConfigLoaded(true))
+  }, [])
+
+  useEffect(() => {
+    if (!configLoaded) return undefined
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(mapping))
+    setSaveState('saving')
+    const timer = setTimeout(() => {
+      fetch('/api/auth/controller-settings', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config: { mapping, mode, slaveId, autoConnect } })
+      }).then(r => { if (!r.ok) throw new Error(); setSaveState('saved') }).catch(() => setSaveState('error'))
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [mapping, mode, slaveId, autoConnect, configLoaded])
   useEffect(() => {
     fetch('/api/profiles').then(r => r.json()).then(data => {
       const own = data.success ? data.profiles || {} : {}
@@ -90,23 +125,24 @@ export function ControllerSettingsPanel() {
         })
       }
 
-      if (captureChannel !== null) {
+      if (capture) {
         const previous = previousInputRef.current
-        const axisIndex = gamepad.axes.findIndex((value, index) => Math.abs(value - (previous.axes[index] || 0)) > 0.45)
+        const axisIndex = gamepad.axes.findIndex((value, index) => Math.abs(value - (previous.axes[index] || 0)) > 0.3)
         const buttonIndex = gamepad.buttons.findIndex((button, index) => button.pressed && !previous.buttons[index])
-        if (axisIndex >= 0 || buttonIndex >= 0) {
-          setMapping(old => old.map((item, index) => index === captureChannel ? {
-            ...item,
-            sourceType: axisIndex >= 0 ? 'axis' : 'button',
-            sourceIndex: axisIndex >= 0 ? axisIndex : buttonIndex,
-          } : item))
-          setCaptureChannel(null)
+        if (capture.type === 'axis' && axisIndex >= 0) {
+          setMapping(old => old.map((item, index) => index === capture.channel ? { ...item, sourceType: 'axis', sourceIndex: axisIndex } : item))
+          setCapture(null)
+        } else if (capture.type === 'buttons' && buttonIndex >= 0) {
+          const required = capture.count
+          setMapping(old => old.map((item, index) => index === capture.channel ? { ...item, buttons: [...(item.buttons || []).slice(0, capture.position), buttonIndex] } : item))
+          if (capture.position + 1 >= required) setCapture(null)
+          else setCapture({ ...capture, position: capture.position + 1 })
         }
       }
       previousInputRef.current = { axes: [...gamepad.axes], buttons: gamepad.buttons.map(button => button.pressed) }
     }, 50)
     return () => clearInterval(timer)
-  }, [captureChannel, calibrating])
+  }, [capture, calibrating])
 
   useEffect(() => {
     const update = (event, down) => {
@@ -159,6 +195,15 @@ export function ControllerSettingsPanel() {
     calibrationRef.current = null; setCalibrating(false)
   }
   const updateMap = (index, patch) => setMapping(old => old.map((item, i) => i === index ? { ...item, ...patch } : item))
+  const startCapture = (index, item) => {
+    const gamepad = [...navigator.getGamepads()].find(Boolean)
+    if (gamepad) previousInputRef.current = { axes: [...gamepad.axes], buttons: gamepad.buttons.map(button => button.pressed) }
+    if (item.sourceType === 'axis') setCapture({ channel: index, type: 'axis' })
+    else if (item.sourceType === 'button2' || item.sourceType === 'button3') {
+      updateMap(index, { buttons: [] })
+      setCapture({ channel: index, type: 'buttons', count: item.sourceType === 'button3' ? 3 : 2, position: 0 })
+    }
+  }
 
   return <div className="control-settings-panel">
     <label>Дрон<select value={slaveId} onChange={event => { setEnabled(false); setSlaveId(event.target.value) }}><option value="">Оберіть дрон</option>{Object.entries(profiles).map(([id,p]) => <option key={id} value={id}>{p.name || `Drone ${id}`}</option>)}</select></label>
@@ -167,17 +212,18 @@ export function ControllerSettingsPanel() {
       <div className="gamepad-info"><b>Пристрій:</b> {gamepadName}</div>
       <div className="calibration-actions"><button onClick={calibrating ? finishCalibration : beginCalibration}>{calibrating ? 'Завершити калібрування' : 'Калібрувати всі осі'}</button><button onClick={() => setMapping(defaultMap())}>Скинути мапінг</button></div>
       {calibrating && <p className="calibration-note">Порухайте всі стіки та потенціометри до крайніх положень, потім відпустіть їх у центр і натисніть «Завершити».</p>}
-      <div className="mapping-table"><div className="mapping-head">Канал</div><div className="mapping-head">Джерело</div><div className="mapping-head">Індекс</div><div className="mapping-head">Інверсія</div><div className="mapping-head">Значення</div>{mapping.map((item,index) => <div className="mapping-row" key={index}>
+      <div className="mapping-table"><div className="mapping-head">Канал</div><div className="mapping-head">Джерело</div><div className="mapping-head">Осі / кнопки позицій</div><div className="mapping-head">Інверсія</div><div className="mapping-head">Значення</div>{mapping.map((item,index) => <div className="mapping-row" key={index}>
         <b>CH{index + 1}</b>
-        <select value={item.sourceType} onChange={e => updateMap(index,{sourceType:e.target.value})}><option value="none">Не призначено</option><option value="axis">Вісь</option><option value="button">Кнопка</option></select>
-        <button className={captureChannel === index ? 'capturing' : ''} onClick={() => setCaptureChannel(captureChannel === index ? null : index)}>{captureChannel === index ? 'Рухайте/натисніть…' : `${item.sourceType === 'axis' ? 'Axis' : item.sourceType === 'button' ? 'Button' : '—'} ${item.sourceType === 'none' ? '' : item.sourceIndex}`}</button>
+        <select value={item.sourceType} onChange={e => updateMap(index,{sourceType:e.target.value,buttons:[]})}><option value="none">Не призначено</option><option value="axis">Вісь</option><option value="button2">Перемикач 2 позиції</option><option value="button3">Перемикач 3 позиції</option></select>
+        <button className={capture?.channel === index ? 'capturing' : ''} disabled={item.sourceType === 'none'} onClick={() => capture?.channel === index ? setCapture(null) : startCapture(index,item)}>{capture?.channel === index ? (capture.type === 'axis' ? 'Порухайте віссю…' : `Натисніть позицію ${capture.position + 1}/${capture.count}…`) : item.sourceType === 'axis' ? `Axis ${item.sourceIndex}` : item.sourceType === 'button2' || item.sourceType === 'button3' ? ((item.buttons || []).map((button,i) => `${[1000,1500,2000][item.sourceType === 'button2' && i === 1 ? 2 : i]}: B${button}`).join(' · ') || 'Налаштувати позиції') : '—'}</button>
         <input type="checkbox" checked={item.invert} onChange={e => updateMap(index,{invert:e.target.checked})}/>
         <strong>{channels[index]}</strong>
       </div>)}</div>
     </>}
     <div className={`control-connection ${connection}`}>WebSocket: {connection}</div>
+    <label className="autoconnect-option" style={{ display: 'flex', alignItems: 'center', gap: 9 }}><input type="checkbox" checked={autoConnect} onChange={event => setAutoConnect(event.target.checked)}/> Автопідключати WebSocket при відкритті налаштувань</label>
     <button className={`control-enable ${enabled ? 'stop' : ''}`} disabled={!slaveId} onClick={() => setEnabled(v => !v)}>{enabled ? 'ЗУПИНИТИ КЕРУВАННЯ' : 'УВІМКНУТИ КЕРУВАННЯ'}</button>
-    <p className="control-warning">Мапінг і калібрування зберігаються в цьому браузері. Одним дроном може керувати лише одна вкладка.</p>
+    <p className={`control-warning ${saveState}`}>Конфігурація: {saveState === 'saving' ? 'зберігається…' : saveState === 'error' ? 'помилка збереження' : 'збережена на сервері'}. Одним дроном може керувати лише одна вкладка.</p>
   </div>
 }
 

@@ -1247,10 +1247,13 @@ function TelemetryLog({ droneId, onTelemetryUpdate, onStateChange }) {
     let isMounted = true
     let pollInterval = null
     let controller = new AbortController()
+    let requestInFlight = false
 
     const fetchTelemetry = async () => {
-      // Abort previous request if still pending
-      controller.abort()
+      // Public/VPN requests can take longer than the poll interval. Aborting
+      // the previous request here caused permanent telemetry starvation.
+      if (requestInFlight) return
+      requestInFlight = true
       controller = new AbortController()
       
       try {
@@ -1265,7 +1268,7 @@ function TelemetryLog({ droneId, onTelemetryUpdate, onStateChange }) {
         if (!isMounted) return
 
         if (data.success) {
-          const DISCONNECT_TIMEOUT = 60000 // 60 seconds with no new records = disconnected
+          const DISCONNECT_TIMEOUT = 7000
           const now = Date.now()
           
           if (data.records.length > 0) {
@@ -1296,6 +1299,8 @@ function TelemetryLog({ droneId, onTelemetryUpdate, onStateChange }) {
         if (error.name !== 'AbortError' && isMounted) {
           setConnectionStatus('disconnected')
         }
+      } finally {
+        requestInFlight = false
       }
     }
 
